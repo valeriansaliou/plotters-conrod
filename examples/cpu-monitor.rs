@@ -53,11 +53,17 @@ fn main() {
     let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, u8)> =
         VecDeque::with_capacity(PLOT_POINTS);
 
+    // Bootstrap plotter drawing
+    let mut buffer_rgb: Vec<u8> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT * 3) as usize];
+
+    let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (WINDOW_WIDTH, WINDOW_HEIGHT))
+        .into_drawing_area();
+
     // Start drawing loop
     loop {
         let ui = &mut ui.set_widgets();
 
-        plot(&mut cpu_percent_collector, &mut data_points);
+        plot(&drawing, &mut cpu_percent_collector, &mut data_points);
 
         conrod::widget::Text::new("Hello World!")
             .middle_of(ui.window)
@@ -82,6 +88,7 @@ fn main() {
 }
 
 fn plot(
+    drawing: &DrawingArea<BitMapBackend, plotters::coord::Shift>,
     cpu_percent_collector: &mut cpu::CpuPercentCollector,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, u8)>,
 ) {
@@ -91,12 +98,7 @@ fn plot(
     data_points.truncate(PLOT_POINTS - 1);
     data_points.push_front((chrono::Utc::now(), cpu_percent as u8));
 
-    let mut buffer_rgb: Vec<u8> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT * 3) as usize];
-
-    let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (WINDOW_WIDTH, WINDOW_HEIGHT))
-        .into_drawing_area();
-
-    let mut chart = ChartBuilder::on(&drawing)
+    let mut chart = ChartBuilder::on(drawing)
         .x_label_area_size(0)
         .y_label_area_size(20)
         .build_cartesian_2d(0..PLOT_POINTS, 0.0..100.0)
