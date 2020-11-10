@@ -1,4 +1,4 @@
-# plotters-conrod - The Conrod backend for Plotters
+# plotters-conrod
 
 [Documentation](https://docs.rs/crate/plotters-conrod)
 
@@ -8,7 +8,11 @@ This is an implementation of a Conrod backend for Plotters. This is more efficie
 
 **🇫🇷 Crafted in Nantes, France.**
 
-## What is Plotters?
+## Who uses it?
+
+* The [MakAir](https://makair.life/) ventilator, on its [MakAir Control UI](https://github.com/makers-for-life/makair-control-ui/).
+
+## What is `plotters`?
 
 For more details on Plotters, please check the following links:
 
@@ -16,15 +20,15 @@ For more details on Plotters, please check the following links:
 - Check the main repo at [Plotters repo](https://github.com/38/plotters.git)
 - You can also visit Plotters [Homepage](https://plotters-rs.github.io)
 
-## Install library
+## How to install?
 
-In your `Cargo.toml`:
+Include `plotters-conrod` in your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
 plotters-conrod = "0.3.0"
 ```
 
-## Use the backend
+## How to use?
 
-(WIP)
+🚧 (WIP)
