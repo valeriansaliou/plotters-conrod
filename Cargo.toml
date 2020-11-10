@@ -15,5 +15,10 @@ authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 plotters-backend = "0.3.0"
 
 [dev-dependencies]
-plotters = {version = "0.3.0", default_features = false, features = ["ttf", "all_series"]}
-systemstat = "0.1.5"
+plotters = { version = "0.3.0", default_features = false, features = ["chrono", "bitmap_backend", "ttf", "line_series"] }
+conrod_glium = "0.70"
+conrod_winit = "0.70"
+conrod_core = "0.70"
+glium = "0.24"
+chrono = { version = "0.4", default-features = false }
+psutil = { version = "3.2.0" }
