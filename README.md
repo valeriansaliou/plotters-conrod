@@ -1,10 +1,9 @@
 # plotters-conrod
 
-[Documentation](https://docs.rs/crate/plotters-conrod)
-
-[Crate](https://crates.io/crates/plotters-conrod)
-
 This is an implementation of a Conrod backend for Plotters. This is more efficient than using the default Bitmap backend when plotting in Conrod.
+
+* [Documentation](https://docs.rs/crate/plotters-conrod)
+* [Crate](https://crates.io/crates/plotters-conrod)
 
 **🇫🇷 Crafted in Nantes, France.**
 
