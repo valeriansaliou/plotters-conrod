@@ -15,9 +15,9 @@ This is an implementation of a Conrod backend for Plotters. This is more efficie
 
 For more details on Plotters, please check the following links:
 
-- For high-level intro of Plotters, see: [Plotters on crates.io](https://crates.io/crates/plotters)
-- Check the main repo at [Plotters repo](https://github.com/38/plotters.git)
-- You can also visit Plotters [Homepage](https://plotters-rs.github.io)
+- For an introduction of Plotters, see: [Plotters on Crates.io](https://crates.io/crates/plotters);
+- Check the main repository on [GitHub](https://github.com/38/plotters);
+- You can also visit the Plotters [homepage](https://plotters-rs.github.io/);
 
 ## How to install?
 
