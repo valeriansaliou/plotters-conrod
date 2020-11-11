@@ -30,4 +30,4 @@ plotters-conrod = "0.3.0"
 
 ## How to use?
 
-🚧 (WIP)
+🚧 TODO
