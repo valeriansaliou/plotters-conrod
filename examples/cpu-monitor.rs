@@ -26,9 +26,11 @@ const WINDOW_HEIGHT: u32 = 480;
 
 const PLOT_SECONDS: usize = 10;
 
-const SAMPLES_PER_SECOND: usize = 30;
-const SAMPLE_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / SAMPLES_PER_SECOND as u64);
-const SAMPLE_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
+const SAMPLE_EVERY: Duration = Duration::from_secs(1);
+
+const FRAME_TICK_RATE: usize = 30;
+const FRAME_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / FRAME_TICK_RATE as u64);
+const FRAME_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 pub struct EventLoop;
@@ -158,14 +160,12 @@ fn main() {
 
     // Bootstrap CPU percent collector
     let mut cpu_percent_collector = cpu::CpuPercentCollector::new().unwrap();
-    let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, u8)> =
-        VecDeque::with_capacity(SAMPLES_PER_SECOND * PLOT_SECONDS);
+    let (mut cpu_last_sample_value, mut cpu_last_sample_time) = (0, Instant::now());
+    let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, i32)> =
+        VecDeque::with_capacity(FRAME_TICK_RATE * PLOT_SECONDS);
 
     // Bootstrap images map
-    let image_ids = ImageIds::new(
-        &mut image_map,
-        plot(&display, &mut cpu_percent_collector, &mut data_points),
-    );
+    let image_ids = ImageIds::new(&mut image_map, plot(&display, &mut data_points, 0));
 
     // Start evens handler
     let mut events_handler = EventsHandler::new();
@@ -173,6 +173,12 @@ fn main() {
     // Start drawing loop
     'main: loop {
         let tick_start_time = Instant::now();
+
+        // Sample CPU point?
+        if tick_start_time.duration_since(cpu_last_sample_time) > SAMPLE_EVERY {
+            cpu_last_sample_value = cpu_percent_collector.cpu_percent().unwrap() as i32;
+            cpu_last_sample_time = tick_start_time;
+        }
 
         // Handle incoming UI events (ie. from the window, eg. 'ESC' key is pressed)
         match events_handler.handle(&display, &mut interface, &mut events_loop) {
@@ -186,7 +192,7 @@ fn main() {
 
             image_map.replace(
                 image_ids.plot,
-                plot(&display, &mut cpu_percent_collector, &mut data_points),
+                plot(&display, &mut data_points, cpu_last_sample_value),
             );
 
             conrod::widget::Image::new(image_ids.plot)
@@ -214,32 +220,29 @@ fn main() {
 
         // FPS limiter, also makes sure to account for each loop processing time in the current \
         //   limit, as to 'guarantee' that we converge to the target FPS in any case.
-        thread::sleep(if SAMPLE_TICK_WAIT_NORMAL > tick_spent_time {
+        thread::sleep(if FRAME_TICK_WAIT_NORMAL > tick_spent_time {
             std::cmp::max(
-                SAMPLE_TICK_WAIT_NORMAL - tick_spent_time,
-                SAMPLE_TICK_WAIT_MINIMUM,
+                FRAME_TICK_WAIT_NORMAL - tick_spent_time,
+                FRAME_TICK_WAIT_MINIMUM,
             )
         } else {
-            SAMPLE_TICK_WAIT_MINIMUM
+            FRAME_TICK_WAIT_MINIMUM
         });
     }
 }
 
 fn plot(
     display: &GliumDisplayWinitWrapper,
-    cpu_percent_collector: &mut cpu::CpuPercentCollector,
-    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, u8)>,
+    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    cpu_last_sample_value: i32,
 ) -> glium::texture::SrgbTexture2d {
     let mut buffer_rgb: Vec<u8> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT * 3) as usize];
 
     let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (WINDOW_WIDTH, WINDOW_HEIGHT))
         .into_drawing_area();
 
-    // Sample current CPU usage and append to data points
-    let cpu_percent = cpu_percent_collector.cpu_percent().unwrap();
-
     // Truncate to maximum size & clean expired points
-    data_points.truncate(SAMPLES_PER_SECOND * PLOT_SECONDS - 1);
+    data_points.truncate(FRAME_TICK_RATE * PLOT_SECONDS - 1);
 
     if !data_points.is_empty() {
         let older = data_points.front().unwrap().0 - chrono::Duration::seconds(PLOT_SECONDS as _);
@@ -249,7 +252,7 @@ fn plot(
         }
     }
 
-    data_points.push_front((chrono::Utc::now(), cpu_percent as u8));
+    data_points.push_front((chrono::Utc::now(), cpu_last_sample_value));
 
     // Acquire time range
     let newest_time = data_points
