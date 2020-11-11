@@ -44,7 +44,31 @@ plotters-conrod = "0.3.0"
 
 ## How to use?
 
-🚧 TODO
+First, import `ConrodBackend`:
+
+```rust
+use plotters_conrod::ConrodBackend;
+```
+
+Then, for each frame you draw, call:
+
+```rust
+// 'ids.parent' is the WidgetId of the canvas that contains your plot;
+// 'ids.points' is a List of WidgetId, pre-allocated to a large-enough number \
+//   of WidgetId so that all Conrod primitives can be inserted as to draw the \
+//   full graph. If this number is too low, your app will panic.
+let drawing = ConrodBackend::new(
+    ui,
+    (plot_width, plot_height),
+    ids.parent,
+    fonts.regular,
+    &ids.points,
+).into_drawing_area();
+
+// Build your chart as usual here
+```
+
+If you are looking for a full example of an implementation, please check [cpu-monitor.rs](./examples/cpu-monitor.rs).
 
 ## Run the examples
 
