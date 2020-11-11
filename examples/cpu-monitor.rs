@@ -14,7 +14,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use chrono;
-use conrod_core::{self as conrod, Colorable, Positionable, Sizeable, Widget};
+use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
 use conrod_glium;
 use conrod_winit::WinitWindow;
 use glium::{self, Surface};
@@ -28,7 +28,9 @@ const PLOT_HEIGHT: u32 = 480;
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
 const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
 
-const TITLE_FONT_SIZE: u32 = 18;
+const TITLE_FONT_SIZE: u32 = 22;
+const TITLE_MARGIN_LEFT: f64 = 10.0;
+const TITLE_MARGIN_TOP: f64 = 8.0;
 
 const PLOT_SECONDS: usize = 10;
 
@@ -202,7 +204,7 @@ fn main() {
     let mut title_text_style = conrod_core::widget::primitive::text::Style::default();
 
     title_text_style.font_id = Some(Some(font_bold));
-    title_text_style.color = Some(conrod::color::RED);
+    title_text_style.color = Some(conrod::color::WHITE);
     title_text_style.font_size = Some(TITLE_FONT_SIZE);
 
     // Start evens handler
@@ -244,9 +246,9 @@ fn main() {
                 .top_left_of(ids.bitmap_wrapper)
                 .set(ids.bitmap_plot, &mut ui);
 
-            conrod::widget::Text::new("Bitmap chart")
+            conrod::widget::Text::new("Bitmap reference chart")
                 .with_style(title_text_style)
-                .top_left_of(ids.bitmap_wrapper)
+                .top_left_with_margins_on(ids.bitmap_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
                 .set(ids.bitmap_text, &mut ui);
 
             // Draw Conrod chart
@@ -260,9 +262,9 @@ fn main() {
                 .top_left_of(ids.conrod_wrapper)
                 .set(ids.conrod_plot, &mut ui);
 
-            conrod::widget::Text::new("Conrod chart")
+            conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
-                .top_left_of(ids.conrod_wrapper)
+                .top_left_with_margins_on(ids.conrod_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
                 .set(ids.conrod_text, &mut ui);
 
             // Force a redraw, so that the graph updates itself (due to a bug in Conrod, where \
