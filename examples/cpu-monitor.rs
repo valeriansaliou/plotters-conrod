@@ -371,8 +371,6 @@ fn render_conrod_plot<'a, 'b>(
     .into_drawing_area();
 
     plot(data_points, &conrod_drawing);
-
-    // TODO
 }
 
 fn plot<D: IntoDrawingArea>(
@@ -414,7 +412,7 @@ fn plot<D: IntoDrawingArea>(
         .draw_series(
             LineSeries::new(
                 data_points.iter().map(|x| (x.0, x.1 as i32)),
-                ShapeStyle::from(&plotters::style::colors::WHITE)
+                ShapeStyle::from(&plotters::style::RGBColor(0, 196, 255))
                     .filled()
                     .stroke_width(2),
             )
