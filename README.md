@@ -80,4 +80,4 @@ This example samples your CPU load every second, and renders it in a real-time c
 cargo run --release --example cpu-monitor
 ```
 
-_The first plot uses the default Bitmap backend as a reference, while the second plot uses `plotters-conrod`. This can be used to compare the output and performance of both plotting backends._
+_The first plot uses `plotters-conrod`, while the second plot uses the default Bitmap backend as a reference. This can be used to compare the output and performance of both plotting backends. The Bitmap reference plot can be disabled by setting `REFERENCE_BITMAP_ENABLED` to `false`._
