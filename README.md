@@ -9,7 +9,17 @@ This is an implementation of a Conrod backend for Plotters. This is more efficie
 
 ## Who uses it?
 
-* The [MakAir](https://makair.life/) ventilator, on its Rust-based [MakAir Control UI](https://github.com/makers-for-life/makair-control-ui/);
+<table>
+<tr>
+<td align="center"><a href="https://github.com/makers-for-life/makair-control-ui/"><img src="https://valeriansaliou.github.io/plotters-conrod/images/makair.png" height="64" /></a></td>
+</tr>
+<tr>
+<td align="center">MakAir</td>
+</tr>
+</table>
+
+_ℹ️ The [MakAir](https://makair.life/) open-source medical ventilator uses `plotters-conrod` on its Rust-based [MakAir Control UI](https://github.com/makers-for-life/makair-control-ui/)._
+_👋 You use `plotters-conrod` and you want to be listed there? [Contact me](https://valeriansaliou.name/)._
 
 ## What is Plotters?
 
