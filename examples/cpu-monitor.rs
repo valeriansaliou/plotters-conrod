@@ -23,7 +23,7 @@ use plotters::style::TextStyle;
 use plotters_conrod::ConrodBackend;
 use psutil::*;
 
-const PLOT_BITMAP_ENABLED: bool = false;
+const PLOT_BITMAP_ENABLED: bool = true;
 
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
