@@ -105,20 +105,20 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
         // TODO: this may not be super optimized, but we need to change absolute point positions \
         //   to relative positions inside the parent.
-        if let Some(bounding_box) = self.ui.kids_bounding_box(self.parent) {
-            let box_x_start = bounding_box.x.start as i32;
-            let box_y_end = bounding_box.y.end as i32;
+        // if let Some(bounding_box) = self.ui.kids_bounding_box(self.parent) {
+        let box_x_start = 0 as i32;
+        let box_y_end = 0 as i32;
 
-            // TODO: remove the absolute positioning thing
-            // TODO: positions do not work as expected, they need to be drawn from parent
-            conrod::widget::line::Line::abs_styled(
-                [(from.0 + box_x_start) as _, (-from.1 + box_y_end) as _],
-                [(to.0 + box_x_start) as _, (-to.1 + box_y_end) as _],
-                line_style,
-            )
-            .top_left_of(self.parent)
-            .set(self.points[index], &mut self.ui);
-        }
+        // TODO: remove the absolute positioning thing
+        // TODO: positions do not work as expected, they need to be drawn from parent
+        conrod::widget::line::Line::abs_styled(
+            [(from.0 + box_x_start) as _, (-from.1 + box_y_end) as _],
+            [(to.0 + box_x_start) as _, (-to.1 + box_y_end) as _],
+            line_style,
+        )
+        .top_left_of(self.parent)
+        .set(self.points[index], &mut self.ui);
+        // }
 
         Ok(())
     }
