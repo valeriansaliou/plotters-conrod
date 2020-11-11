@@ -156,7 +156,9 @@ widget_ids!(struct Ids {
     bitmap_plot,
     conrod_wrapper,
     conrod_text,
-    conrod_plot_points[],
+    conrod_plot_points_line[],
+    conrod_plot_points_circle[],
+    conrod_plot_points_text[],
 });
 
 fn main() {
@@ -181,7 +183,11 @@ fn main() {
 
     let mut ids = Ids::new(interface.widget_id_generator());
 
-    ids.conrod_plot_points
+    ids.conrod_plot_points_line
+        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
+    ids.conrod_plot_points_circle
+        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
+    ids.conrod_plot_points_text
         .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
 
     let mut image_map = conrod::image::Map::<glium::texture::SrgbTexture2d>::new();
@@ -380,7 +386,9 @@ fn render_conrod_plot<'a, 'b>(
         (PLOT_WIDTH, PLOT_HEIGHT),
         ids.conrod_wrapper,
         font,
-        &ids.conrod_plot_points,
+        &ids.conrod_plot_points_line,
+        &ids.conrod_plot_points_circle,
+        &ids.conrod_plot_points_text,
     )
     .into_drawing_area();
 
