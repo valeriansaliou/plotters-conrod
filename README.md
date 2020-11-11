@@ -48,7 +48,7 @@ plotters-conrod = "0.3.0"
 
 ### Example #1: `cpu-monitor`
 
-This example samples your CPU load every second, and renders it in real-time charts:
+This example samples your CPU load every second, and renders it in a real-time chart:
 
 ```sh
 cargo run --release --example cpu-monitor
