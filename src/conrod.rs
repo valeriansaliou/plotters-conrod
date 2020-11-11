@@ -27,8 +27,20 @@ pub struct ConrodBackend<'a, 'b> {
     size: (u32, u32),
     parent: conrod::widget::Id,
     font: conrod_core::text::font::Id,
-    points: &'b conrod::widget::id::List, // TODO: super heavy
-    point_index: usize,                   // TODO: ugly
+    points: ConrodBackendPoints<'b>,
+    indexes: ConrodBackendIndexes,
+}
+
+pub struct ConrodBackendPoints<'a> {
+    line: &'a conrod::widget::id::List,   // TODO: super heavy
+    circle: &'a conrod::widget::id::List, // TODO: super heavy
+    text: &'a conrod::widget::id::List,   // TODO: super heavy
+}
+
+pub struct ConrodBackendIndexes {
+    line: usize,   // TODO: ugly
+    circle: usize, // TODO: ugly
+    text: usize,   // TODO: ugly
 }
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
@@ -37,15 +49,25 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         size: (u32, u32),
         parent: conrod::widget::Id,
         font: conrod_core::text::font::Id,
-        points: &'b conrod::widget::id::List,
+        points_line: &'b conrod::widget::id::List,
+        points_circle: &'b conrod::widget::id::List,
+        points_text: &'b conrod::widget::id::List,
     ) -> Self {
         Self {
             ui,
             parent,
             font,
             size,
-            points,
-            point_index: 0,
+            points: ConrodBackendPoints {
+                line: points_line,
+                circle: points_circle,
+                text: points_text,
+            },
+            indexes: ConrodBackendIndexes {
+                line: 0,
+                circle: 0,
+                text: 0,
+            },
         }
     }
 }
@@ -100,8 +122,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
         // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.point_index;
-        self.point_index += 1;
+        let index = self.indexes.line;
+        self.indexes.line += 1;
 
         // TODO: this may not be super optimized, but we need to change absolute point positions \
         //   to relative positions inside the parent.
@@ -118,7 +140,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.points[index], &mut self.ui);
+            .set(self.points.line[index], &mut self.ui);
         }
 
         Ok(())
@@ -192,40 +214,32 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
     fn draw_circle<S: BackendStyle>(
         &mut self,
-        _center: BackendCoord,
-        _radius: u32,
-        _style: &S,
-        _fill: bool,
+        center: BackendCoord,
+        radius: u32,
+        style: &S,
+        fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO
-        // let rect = circle(center.0 as f64, center.1 as f64, radius as f64);
-        // if fill {
-        //     ellipse(
-        //         make_piston_rgba(&style.color()),
-        //         rect,
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        // } else {
-        //     circle_arc(
-        //         make_piston_rgba(&style.color()),
-        //         self.scale,
-        //         std::f64::consts::PI,
-        //         0.0,
-        //         rect,
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        //     circle_arc(
-        //         make_piston_rgba(&style.color()),
-        //         self.scale,
-        //         0.0,
-        //         std::f64::consts::PI,
-        //         rect,
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        // }
+        // TODO: this is ugly, as we cannot reference by coords due to collisions
+        let index = self.indexes.circle;
+        self.indexes.circle += 1;
+
+        let circle_style = if fill == true {
+            conrod::widget::primitive::shape::Style::fill_with(make_conrod_color(&style.color()))
+        } else {
+            conrod::widget::primitive::shape::Style::outline_styled(
+                conrod::widget::primitive::line::Style::new()
+                    .color(make_conrod_color(&style.color()))
+                    .thickness(style.stroke_width() as _),
+            )
+        };
+
+        conrod::widget::circle::Circle::styled(radius as f64, circle_style)
+            .top_left_with_margins_on(
+                self.parent,
+                (center.1 - radius as i32) as f64,
+                (center.0 - radius as i32) as f64,
+            )
+            .set(self.points.circle[index], &mut self.ui);
 
         Ok(())
     }
@@ -238,8 +252,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.point_index;
-        self.point_index += 1;
+        let index = self.indexes.text;
+        self.indexes.text += 1;
 
         // TODO: this is also ugly, should not have to do that
         let text_width_estimated = (text.len() as f64 * style.size()) * 0.6;
@@ -268,7 +282,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as f64 - (style.size() / 2.0),
                 pos.0 as f64 - text_width_estimated,
             )
-            .set(self.points[index], &mut self.ui);
+            .set(self.points.text[index], &mut self.ui);
 
         Ok(())
     }
