@@ -5,10 +5,11 @@
 // License: MIT
 
 use plotters_backend::{
-    BackendColor, BackendCoord, BackendStyle, BackendTextStyle, DrawingBackend, DrawingErrorKind,
+    text_anchor, BackendColor, BackendCoord, BackendStyle, BackendTextStyle, DrawingBackend,
+    DrawingErrorKind,
 };
 
-use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
+use conrod_core::{self as conrod, Positionable, Widget};
 
 #[derive(Debug)]
 pub struct DummyBackendError;
@@ -25,9 +26,9 @@ pub struct ConrodBackend<'a, 'b> {
     ui: &'a mut conrod::UiCell<'b>,
     size: (u32, u32),
     parent: conrod::widget::Id,
+    font: conrod_core::text::font::Id,
     points: &'b conrod::widget::id::List, // TODO: super heavy
-    lines: &'b conrod::widget::id::List,  // TODO: super heavy
-    line_last_idx: usize,                 // TODO: ugly
+    point_index: usize,                   // TODO: ugly
 }
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
@@ -35,16 +36,16 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         ui: &'a mut conrod::UiCell<'b>,
         size: (u32, u32),
         parent: conrod::widget::Id,
+        font: conrod_core::text::font::Id,
         points: &'b conrod::widget::id::List,
-        lines: &'b conrod::widget::id::List,
     ) -> Self {
         Self {
             ui,
             parent,
+            font,
             size,
             points,
-            lines,
-            line_last_idx: 0,
+            point_index: 0,
         }
     }
 }
@@ -57,32 +58,32 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     }
 
     fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
-        // TODO: use this (do something w/ it)
         Ok(())
     }
 
     fn present(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
-        // TODO: use this (do something w/ it)
         Ok(())
     }
 
     fn draw_pixel(
         &mut self,
-        point: BackendCoord,
-        color: BackendColor,
+        _point: BackendCoord,
+        _color: BackendColor,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: disable this heavy impl? (we better off)
+        // TODO: disabled for now, as its heavy as we seemingly do not need it
+        // TODO: maybe make it configurable as to enable it as needed? Or use lighter drawing \
+        //   primitives, or else disable it in a static way
 
         // TODO: fn for that
         // pos = y(p.1) x width + x(p.0)
-        let id_linear_idx = (point.1 * self.size.0 as i32 + point.0) as usize;
-        let (pos_x, pos_y) = (point.0 as f64, point.1 as f64);
+        // let id_linear_idx = (point.1 * self.size.0 as i32 + point.0) as usize;
+        // let (pos_x, pos_y) = (point.0 as f64, point.1 as f64);
 
-        // TODO: use a point primitive rather?
-        // TODO: figure out this id thing, or create a custom widget? looks dirty here
-        conrod::widget::rectangle::Rectangle::fill_with([1.0, 1.0], make_conrod_color(&color))
-            .top_left_with_margins_on(self.parent, pos_y, pos_x)
-            .set(self.points[id_linear_idx], &mut self.ui);
+        // // TODO: use a point primitive rather?
+        // // TODO: figure out this id thing, or create a custom widget? looks dirty here
+        // conrod::widget::rectangle::Rectangle::fill_with([1.0, 1.0], make_conrod_color(&color))
+        //     .top_left_with_margins_on(self.parent, pos_y, pos_x)
+        //     .set(self.points[id_linear_idx], &mut self.ui);
 
         Ok(())
     }
@@ -93,39 +94,36 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        let mut style = conrod::widget::primitive::line::Style::solid()
+        let line_style = conrod::widget::primitive::line::Style::solid()
             .color(make_conrod_color(&style.color()))
             .thickness(style.stroke_width() as _);
 
+        // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let id_linear_idx = self.line_last_idx;
-        self.line_last_idx += 1;
+        let index = self.point_index;
+        self.point_index += 1;
 
         let half_width = (self.size.0 / 2) as i32;
-        let full_height = self.size.1 as i32;
 
-        // TODO: remove the absolute positioning shit
+        // TODO: remove the absolute positioning thing
         conrod::widget::line::Line::abs_styled(
             [(from.0 - half_width) as _, -from.1 as _],
             [(to.0 - half_width) as _, -to.1 as _],
-            style,
+            line_style,
         )
         .top_left_of(self.parent)
-        .set(self.lines[id_linear_idx], &mut self.ui);
+        .set(self.points[index], &mut self.ui);
 
         Ok(())
     }
 
     fn draw_rect<S: BackendStyle>(
         &mut self,
-        upper_left: BackendCoord,
-        bottom_right: BackendCoord,
-        style: &S,
-        fill: bool,
+        _upper_left: BackendCoord,
+        _bottom_right: BackendCoord,
+        _style: &S,
+        _fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("ConrodBackend : draw_rect");
-
         // TODO
         // if fill {
         //     rectangle(
@@ -187,14 +185,11 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
     fn draw_circle<S: BackendStyle>(
         &mut self,
-        center: BackendCoord,
-        radius: u32,
-        style: &S,
-        fill: bool,
+        _center: BackendCoord,
+        _radius: u32,
+        _style: &S,
+        _fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("ConrodBackend : draw_circle");
-
         // TODO
         // let rect = circle(center.0 as f64, center.1 as f64, radius as f64);
         // if fill {
@@ -234,34 +229,65 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         pos: BackendCoord,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("ConrodBackend : draw_text");
+        // TODO: commonize calls to this in a method
+        // TODO: this is ugly, as we cannot reference by coords due to collisions
+        let index = self.point_index;
+        self.point_index += 1;
 
-        // TODO
+        // TODO: this is also ugly, should not have to do that
+        let text_width_estimated = (text.len() as f64 * style.size()) * 0.6;
+
+        // Font size needs to be adjusted using a 90% factor, as to appear the same size than \
+        //   when redered using the reference Bitmap backend.
+        let font_size_final = (style.size() * 0.9) as u32;
+
+        let mut text_style = conrod_core::widget::primitive::text::Style::default();
+
+        text_style.color = Some(make_conrod_color(&style.color()));
+        text_style.font_id = Some(Some(self.font));
+        text_style.font_size = Some(font_size_final);
+
+        text_style.justify = Some(match style.anchor().h_pos {
+            text_anchor::HPos::Left => conrod_core::text::Justify::Left,
+            text_anchor::HPos::Right => conrod_core::text::Justify::Right,
+            text_anchor::HPos::Center => conrod_core::text::Justify::Center,
+        });
+
+        // TODO: support transform and style
+        conrod::widget::Text::new(text)
+            .with_style(text_style)
+            .top_left_with_margins_on(
+                self.parent,
+                pos.1 as f64 - (style.size() / 2.0),
+                pos.0 as f64 - text_width_estimated,
+            )
+            .set(self.points[index], &mut self.ui);
 
         Ok(())
     }
 
-    // TODO
-    // fn estimate_text_size<S: BackendTextStyle>(
-    //     &self,
-    //     text: &str,
-    //     style: &S
-    // ) -> Result<(u32, u32), DrawingErrorKind<Self::ErrorType>> {
-    //     // TODO
+    fn estimate_text_size<S: BackendTextStyle>(
+        &self,
+        _text: &str,
+        _style: &S,
+    ) -> Result<(u32, u32), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: implement this, avoid using the font rasterizer
 
-    //     Ok((0, 0))
-    // }
+        Ok((0, 0))
+    }
 }
 
 // TODO: implement Into or From on conrod Color trait? (cleaner)
 fn make_conrod_color(color: &BackendColor) -> conrod_core::color::Color {
     let ((r, g, b), a) = (color.rgb, color.alpha);
 
+    // Notice: correct alpha channel value, looks like there is a sqrt ratio between plotters and \
+    //   conrod color objects.
+    // TODO: this does not work fine for all alpha levels, is that color HSL or something else?
     conrod_core::color::Color::Rgba(
         r as f32 / 255.0,
         g as f32 / 255.0,
         b as f32 / 255.0,
-        a as f32,
+        (a * a) as f32,
     )
 }

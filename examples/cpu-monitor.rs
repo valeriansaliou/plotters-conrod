@@ -23,10 +23,13 @@ use plotters::style::TextStyle;
 use plotters_conrod::ConrodBackend;
 use psutil::*;
 
+const PLOT_BITMAP_ENABLED: bool = false;
+
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
 const PLOT_PIXELS: usize = (PLOT_WIDTH * PLOT_HEIGHT) as usize;
 const PLOT_SECONDS: usize = 10;
+const PLOT_IDS_MAXIMUM: usize = 1000;
 
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
 const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
@@ -148,7 +151,6 @@ widget_ids!(struct Ids {
     conrod_wrapper,
     conrod_text,
     conrod_plot_points[],
-    conrod_plot_lines[],
 });
 
 fn main() {
@@ -174,16 +176,14 @@ fn main() {
     let mut ids = Ids::new(interface.widget_id_generator());
 
     ids.conrod_plot_points
-        .resize(PLOT_PIXELS, &mut interface.widget_id_generator());
-    ids.conrod_plot_lines
-        .resize(PLOT_PIXELS, &mut interface.widget_id_generator());
+        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
 
     let mut image_map = conrod::image::Map::<glium::texture::SrgbTexture2d>::new();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
 
     // Load fonts
-    let _font_regular = interface
+    let font_regular = interface
         .fonts
         .insert_from_file(Path::new("./examples/fonts/notosans-regular.ttf"))
         .unwrap();
@@ -264,20 +264,22 @@ fn main() {
                 .top_left()
                 .set(ids.bitmap_wrapper, &mut ui);
 
-            image_map.replace(
-                image_ids.bitmap_plot,
-                render_bitmap_plot(&display, &mut data_points),
-            );
+            if PLOT_BITMAP_ENABLED {
+                image_map.replace(
+                    image_ids.bitmap_plot,
+                    render_bitmap_plot(&display, &mut data_points),
+                );
 
-            conrod::widget::Image::new(image_ids.bitmap_plot)
-                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                .top_left_of(ids.bitmap_wrapper)
-                .set(ids.bitmap_plot, &mut ui);
+                conrod::widget::Image::new(image_ids.bitmap_plot)
+                    .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                    .top_left_of(ids.bitmap_wrapper)
+                    .set(ids.bitmap_plot, &mut ui);
 
-            conrod::widget::Text::new("Bitmap reference chart")
-                .with_style(title_text_style)
-                .top_left_with_margins_on(ids.bitmap_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
-                .set(ids.bitmap_text, &mut ui);
+                conrod::widget::Text::new("Bitmap reference chart")
+                    .with_style(title_text_style)
+                    .top_left_with_margins_on(ids.bitmap_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
+                    .set(ids.bitmap_text, &mut ui);
+            }
 
             // Draw Conrod chart
             conrod::widget::canvas::Canvas::new()
@@ -286,7 +288,7 @@ fn main() {
                 .down_from(ids.bitmap_wrapper, 0.0)
                 .set(ids.conrod_wrapper, &mut ui);
 
-            render_conrod_plot(&mut ui, &mut data_points, &ids);
+            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular);
 
             conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
@@ -360,13 +362,14 @@ fn render_conrod_plot<'a, 'b>(
     ui: &'a mut conrod::UiCell<'b>,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     ids: &'b Ids,
+    font: conrod_core::text::font::Id,
 ) {
     let conrod_drawing = ConrodBackend::new(
         ui,
         (PLOT_WIDTH, PLOT_HEIGHT),
         ids.conrod_wrapper,
+        font,
         &ids.conrod_plot_points,
-        &ids.conrod_plot_lines,
     )
     .into_drawing_area();
 
