@@ -143,7 +143,14 @@ impl ImageIds {
 
 conrod_winit::conversion_fns!();
 
-widget_ids!(struct Ids { bitmap_wrapper, bitmap_text, bitmap_plot, conrod_wrapper, conrod_text, conrod_plot });
+widget_ids!(struct Ids {
+    bitmap_wrapper,
+    bitmap_text,
+    bitmap_plot,
+    conrod_wrapper,
+    conrod_text,
+    conrod_plot
+});
 
 fn main() {
     // Bootstrap Glium
@@ -189,8 +196,8 @@ fn main() {
     // Bootstrap images map
     let image_ids = ImageIds::new(
         &mut image_map,
-        plot(&display, &mut data_points, 0),
-        plot(&display, &mut data_points, 0),
+        render_bitmap_plot(&display, &mut data_points),
+        render_bitmap_plot(&display, &mut data_points),
     );
 
     // Initialize common canvas style
@@ -220,6 +227,22 @@ fn main() {
             cpu_last_sample_time = tick_start_time;
         }
 
+        // Append point in data points (plus, trim to maximum size & clean expired points)
+        {
+            data_points.truncate(FRAME_TICK_RATE * PLOT_SECONDS - 1);
+
+            if !data_points.is_empty() {
+                let older =
+                    data_points.front().unwrap().0 - chrono::Duration::seconds(PLOT_SECONDS as _);
+
+                while data_points.back().map(|p| p.0 < older).unwrap_or(false) {
+                    data_points.pop_back();
+                }
+            }
+
+            data_points.push_front((chrono::Utc::now(), cpu_last_sample_value));
+        }
+
         // Handle incoming UI events (ie. from the window, eg. 'ESC' key is pressed)
         match events_handler.handle(&display, &mut interface, &mut events_loop) {
             EventsHandlerOutcome::Break => break 'main,
@@ -232,7 +255,13 @@ fn main() {
 
             image_map.replace(
                 image_ids.bitmap_plot,
-                plot(&display, &mut data_points, cpu_last_sample_value),
+                render_bitmap_plot(&display, &mut data_points),
+            );
+
+            // TODO: remove this
+            image_map.replace(
+                image_ids.conrod_plot,
+                render_bitmap_plot(&display, &mut data_points),
             );
 
             // Draw Bitmap chart
@@ -257,6 +286,7 @@ fn main() {
                 .down_from(ids.bitmap_plot, 0.0)
                 .set(ids.conrod_wrapper, &mut ui);
 
+            // TODO: remove this
             conrod::widget::Image::new(image_ids.conrod_plot)
                 .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
                 .top_left_of(ids.conrod_wrapper)
@@ -273,16 +303,18 @@ fn main() {
         }
 
         // Draw interface (if it was updated)
-        if let Some(primitives) = interface.draw_if_changed() {
-            renderer.fill(&display.0, primitives, &image_map);
+        {
+            if let Some(primitives) = interface.draw_if_changed() {
+                renderer.fill(&display.0, primitives, &image_map);
 
-            let mut target = display.0.draw();
+                let mut target = display.0.draw();
 
-            target.clear_color(1.0, 1.0, 1.0, 1.0);
+                target.clear_color(1.0, 1.0, 1.0, 1.0);
 
-            renderer.draw(&display.0, &mut target, &image_map).unwrap();
+                renderer.draw(&display.0, &mut target, &image_map).unwrap();
 
-            target.finish().unwrap();
+                target.finish().unwrap();
+            }
         }
 
         let tick_spent_time = tick_start_time.elapsed();
@@ -300,29 +332,38 @@ fn main() {
     }
 }
 
-fn plot(
+fn render_bitmap_plot(
     display: &GliumDisplayWinitWrapper,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
-    cpu_last_sample_value: i32,
 ) -> glium::texture::SrgbTexture2d {
     let mut buffer_rgb: Vec<u8> = vec![0; (PLOT_WIDTH * PLOT_HEIGHT * 3) as usize];
 
-    let drawing =
-        BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT)).into_drawing_area();
+    // Switch context so that we can re-use 'buffer_rgb' later in read mode (mutable here)
+    {
+        let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT))
+            .into_drawing_area();
 
-    // Truncate to maximum size & clean expired points
-    data_points.truncate(FRAME_TICK_RATE * PLOT_SECONDS - 1);
-
-    if !data_points.is_empty() {
-        let older = data_points.front().unwrap().0 - chrono::Duration::seconds(PLOT_SECONDS as _);
-
-        while data_points.back().map(|p| p.0 < older).unwrap_or(false) {
-            data_points.pop_back();
-        }
+        plot(data_points, &drawing);
     }
 
-    data_points.push_front((chrono::Utc::now(), cpu_last_sample_value));
+    let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
 
+    glium::texture::SrgbTexture2d::new(
+        &display.0,
+        glium::texture::RawImage2d {
+            data: Cow::Borrowed(&buffer_reversed),
+            width: PLOT_WIDTH,
+            height: PLOT_HEIGHT,
+            format: glium::texture::ClientFormat::U8U8U8,
+        },
+    )
+    .unwrap()
+}
+
+fn plot<D: IntoDrawingArea>(
+    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    drawing: &DrawingArea<D, plotters::coord::Shift>,
+) {
     // Acquire time range
     let newest_time = data_points
         .front()
@@ -365,22 +406,6 @@ fn plot(
             .point_size(0),
         )
         .expect("failed to draw chart data");
-
-    drop(chart);
-    drop(drawing);
-
-    let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
-
-    glium::texture::SrgbTexture2d::new(
-        &display.0,
-        glium::texture::RawImage2d {
-            data: Cow::Borrowed(&buffer_reversed),
-            width: PLOT_WIDTH,
-            height: PLOT_HEIGHT,
-            format: glium::texture::ClientFormat::U8U8U8,
-        },
-    )
-    .unwrap()
 }
 
 fn reverse_rgb(image: &[u8], width: u32, height: u32) -> Vec<u8> {
