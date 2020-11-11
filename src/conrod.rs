@@ -8,6 +8,8 @@ use plotters_backend::{
     BackendColor, BackendCoord, BackendStyle, DrawingBackend, DrawingErrorKind, BackendTextStyle,
 };
 
+use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
+
 #[derive(Debug)]
 pub struct DummyBackendError;
 
@@ -39,12 +41,12 @@ impl DrawingBackend for ConrodBackend {
     }
 
     fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
-        // TODO: optimize
+        // TODO: use this (do something w/ it)
         Ok(())
     }
 
     fn present(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
-        // TODO: optimize
+        // TODO: use this (do something w/ it)
         Ok(())
     }
 
@@ -53,13 +55,24 @@ impl DrawingBackend for ConrodBackend {
         point: BackendCoord,
         color: BackendColor,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: use this? this is not optimized!
+
+        // TODO: remove this debug
+        // dbg!("ConrodBackend : draw_pixel (point = {:?})", point);
+
         // TODO
         // piston_window::rectangle(
         //     make_piston_rgba(&color),
-        //     make_point_pair(point, (1, 1), self.scale),
+        //     make_point_pair(point, (1, 1)),
         //     self.context.transform,
         //     self.graphics,
         // );
+
+        // TODO: use a point primitive rather?
+        // conrod::widget::rectangle::Rectangle::fill_with([1.0, 1.0], make_conrod_color(&color))
+        //     .x(point.0 as _)
+        //     .y(point.1 as _)
+        //     .set(self.ui.widget_id_generator(), &mut self.ui); // TODO: figure out this id thing, or create a custom widget?
 
         Ok(())
     }
@@ -70,6 +83,9 @@ impl DrawingBackend for ConrodBackend {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        // dbg!("ConrodBackend : draw_line");
+
         // TODO
         // line(
         //     make_piston_rgba(&style.color()),
@@ -89,6 +105,9 @@ impl DrawingBackend for ConrodBackend {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        // dbg!("ConrodBackend : draw_rect");
+
         // TODO
         // if fill {
         //     rectangle(
@@ -155,6 +174,9 @@ impl DrawingBackend for ConrodBackend {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        // dbg!("ConrodBackend : draw_circle");
+
         // TODO
         // let rect = circle(center.0 as f64, center.1 as f64, radius as f64);
         // if fill {
@@ -210,4 +232,16 @@ impl DrawingBackend for ConrodBackend {
 
     //     Ok((0, 0))
     // }
+}
+
+// TODO: implement Into or From on conrod Color trait? (cleaner)
+fn make_conrod_color(color: &BackendColor) -> conrod_core::color::Color {
+    let ((r, g, b), a) = (color.rgb, color.alpha);
+
+    conrod_core::color::Color::Rgba(
+        r as f32 / 255.0,
+        g as f32 / 255.0,
+        b as f32 / 255.0,
+        a as f32
+    )
 }

@@ -20,6 +20,7 @@ use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
 use plotters::style::TextStyle;
+use plotters_conrod::ConrodBackend;
 use psutil::*;
 
 const PLOT_WIDTH: u32 = 800;
@@ -213,6 +214,9 @@ fn main() {
     // Start evens handler
     let mut events_handler = EventsHandler::new();
 
+    // Create re-usable Conrod plotters backend
+    let conrod_drawing = ConrodBackend::new((PLOT_WIDTH, PLOT_HEIGHT)).into_drawing_area();
+
     // Start drawing loop
     'main: loop {
         let tick_start_time = Instant::now();
@@ -254,7 +258,7 @@ fn main() {
                 render_bitmap_plot(&display, &mut data_points),
             );
 
-            render_conrod_plot(&display, &mut data_points, ids.conrod_plot);
+            render_conrod_plot(&display, &mut data_points, ids.conrod_plot, &conrod_drawing);
 
             // Draw Bitmap chart
             conrod::widget::canvas::Canvas::new()
@@ -326,10 +330,10 @@ fn render_bitmap_plot(
 
     // Switch context so that we can re-use 'buffer_rgb' later in read mode (mutable here)
     {
-        let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT))
+        let bitmap_drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT))
             .into_drawing_area();
 
-        plot(data_points, &drawing);
+        plot(data_points, &bitmap_drawing);
     }
 
     let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
@@ -348,9 +352,12 @@ fn render_bitmap_plot(
 
 fn render_conrod_plot(
     _display: &GliumDisplayWinitWrapper,
-    _data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     _conrod_plot_id: conrod::widget::Id,
+    conrod_drawing: &DrawingArea<ConrodBackend, plotters::coord::Shift>,
 ) {
+    plot(data_points, &conrod_drawing);
+
     // TODO
 }
 
