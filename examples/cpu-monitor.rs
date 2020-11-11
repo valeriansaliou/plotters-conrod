@@ -54,7 +54,6 @@ pub enum EventsHandlerOutcome {
 
 pub struct ImageIds {
     pub bitmap_plot: conrod::image::Id,
-    pub conrod_plot: conrod::image::Id, // TODO: remove this
 }
 
 impl WinitWindow for GliumDisplayWinitWrapper {
@@ -132,11 +131,9 @@ impl ImageIds {
     pub fn new(
         image_map: &mut conrod_core::image::Map<glium::texture::SrgbTexture2d>,
         bitmap_plot_texture: glium::texture::SrgbTexture2d,
-        conrod_plot_texture: glium::texture::SrgbTexture2d,
     ) -> ImageIds {
         ImageIds {
             bitmap_plot: image_map.insert(bitmap_plot_texture),
-            conrod_plot: image_map.insert(conrod_plot_texture), // TODO: remove this
         }
     }
 }
@@ -196,7 +193,6 @@ fn main() {
     // Bootstrap images map
     let image_ids = ImageIds::new(
         &mut image_map,
-        render_bitmap_plot(&display, &mut data_points),
         render_bitmap_plot(&display, &mut data_points),
     );
 
@@ -258,11 +254,7 @@ fn main() {
                 render_bitmap_plot(&display, &mut data_points),
             );
 
-            // TODO: remove this
-            image_map.replace(
-                image_ids.conrod_plot,
-                render_bitmap_plot(&display, &mut data_points),
-            );
+            render_conrod_plot(&display, &mut data_points, ids.conrod_plot);
 
             // Draw Bitmap chart
             conrod::widget::canvas::Canvas::new()
@@ -286,12 +278,6 @@ fn main() {
                 .down_from(ids.bitmap_plot, 0.0)
                 .set(ids.conrod_wrapper, &mut ui);
 
-            // TODO: remove this
-            conrod::widget::Image::new(image_ids.conrod_plot)
-                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                .top_left_of(ids.conrod_wrapper)
-                .set(ids.conrod_plot, &mut ui);
-
             conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
                 .top_left_with_margins_on(ids.conrod_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
@@ -309,7 +295,7 @@ fn main() {
 
                 let mut target = display.0.draw();
 
-                target.clear_color(1.0, 1.0, 1.0, 1.0);
+                target.clear_color(0.0, 0.0, 0.0, 1.0);
 
                 renderer.draw(&display.0, &mut target, &image_map).unwrap();
 
@@ -358,6 +344,14 @@ fn render_bitmap_plot(
         },
     )
     .unwrap()
+}
+
+fn render_conrod_plot(
+    _display: &GliumDisplayWinitWrapper,
+    _data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    _conrod_plot_id: conrod::widget::Id,
+) {
+    // TODO
 }
 
 fn plot<D: IntoDrawingArea>(
