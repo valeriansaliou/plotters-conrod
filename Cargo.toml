@@ -12,7 +12,7 @@ categories = ["visualization"]
 authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 
 [dependencies]
-plotters-backend = "0.3.0"
+plotters-backend = "0.3"
 
 [dev-dependencies]
 plotters = { version = "0.3", default_features = false, features = ["chrono", "bitmap_backend", "line_series", "ttf"] }
