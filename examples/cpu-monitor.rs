@@ -23,8 +23,6 @@ use plotters::style::TextStyle;
 use plotters_conrod::ConrodBackend;
 use psutil::*;
 
-const PLOT_BITMAP_ENABLED: bool = true;
-
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
 const PLOT_PIXELS: usize = (PLOT_WIDTH * PLOT_HEIGHT) as usize;
@@ -32,7 +30,12 @@ const PLOT_SECONDS: usize = 10;
 const PLOT_IDS_MAXIMUM: usize = 1000;
 
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
-const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
+
+const WINDOW_HEIGHT: u32 = if REFERENCE_BITMAP_ENABLED {
+    PLOT_HEIGHT * 2
+} else {
+    PLOT_HEIGHT
+};
 
 const TITLE_FONT_SIZE: u32 = 22;
 const TITLE_MARGIN_LEFT: f64 = 10.0;
@@ -43,6 +46,9 @@ const SAMPLE_EVERY: Duration = Duration::from_secs(1);
 const FRAME_TICK_RATE: usize = 30;
 const FRAME_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / FRAME_TICK_RATE as u64);
 const FRAME_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
+
+// This can be used to disable the reference Bitmap chart
+const REFERENCE_BITMAP_ENABLED: bool = false;
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 pub struct EventLoop;
@@ -257,14 +263,28 @@ fn main() {
         {
             let mut ui = interface.set_widgets();
 
-            // Draw Bitmap chart
+            // Draw Conrod chart
             conrod::widget::canvas::Canvas::new()
                 .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
                 .with_style(canvas_style)
                 .top_left()
-                .set(ids.bitmap_wrapper, &mut ui);
+                .set(ids.conrod_wrapper, &mut ui);
 
-            if PLOT_BITMAP_ENABLED {
+            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular);
+
+            conrod::widget::Text::new("Conrod test chart")
+                .with_style(title_text_style)
+                .top_left_with_margins_on(ids.conrod_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
+                .set(ids.conrod_text, &mut ui);
+
+            // Draw Bitmap chart?
+            if REFERENCE_BITMAP_ENABLED {
+                conrod::widget::canvas::Canvas::new()
+                    .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                    .with_style(canvas_style)
+                    .down_from(ids.conrod_wrapper, 0.0)
+                    .set(ids.bitmap_wrapper, &mut ui);
+
                 image_map.replace(
                     image_ids.bitmap_plot,
                     render_bitmap_plot(&display, &mut data_points),
@@ -277,27 +297,13 @@ fn main() {
 
                 conrod::widget::Text::new("Bitmap reference chart")
                     .with_style(title_text_style)
-                    .top_left_with_margins_on(ids.bitmap_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
+                    .top_left_with_margins_on(
+                        ids.bitmap_wrapper,
+                        TITLE_MARGIN_TOP,
+                        TITLE_MARGIN_LEFT,
+                    )
                     .set(ids.bitmap_text, &mut ui);
             }
-
-            // Draw Conrod chart
-            conrod::widget::canvas::Canvas::new()
-                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                .with_style(canvas_style)
-                .down_from(ids.bitmap_wrapper, 0.0)
-                .set(ids.conrod_wrapper, &mut ui);
-
-            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular);
-
-            conrod::widget::Text::new("Conrod test chart")
-                .with_style(title_text_style)
-                .top_left_with_margins_on(ids.conrod_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
-                .set(ids.conrod_text, &mut ui);
-
-            // Force a redraw, so that the graph updates itself (due to a bug in Conrod, where \
-            //   replacing an image in the image map does not properly request a redraw)
-            ui.needs_redraw();
         }
 
         // Draw interface (if it was updated)
@@ -334,28 +340,33 @@ fn render_bitmap_plot(
     display: &GliumDisplayWinitWrapper,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
 ) -> glium::texture::SrgbTexture2d {
-    let mut buffer_rgb: Vec<u8> = vec![0; PLOT_PIXELS * 3];
+    if REFERENCE_BITMAP_ENABLED {
+        let mut buffer_rgb: Vec<u8> = vec![0; PLOT_PIXELS * 3];
 
-    // Switch context so that we can re-use 'buffer_rgb' later in read mode (mutable here)
-    {
-        let bitmap_drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT))
-            .into_drawing_area();
+        // Switch context so that we can re-use 'buffer_rgb' later in read mode (mutable here)
+        {
+            let bitmap_drawing =
+                BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT))
+                    .into_drawing_area();
 
-        plot(data_points, &bitmap_drawing);
+            plot(data_points, &bitmap_drawing);
+        }
+
+        let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
+
+        glium::texture::SrgbTexture2d::new(
+            &display.0,
+            glium::texture::RawImage2d {
+                data: Cow::Borrowed(&buffer_reversed),
+                width: PLOT_WIDTH,
+                height: PLOT_HEIGHT,
+                format: glium::texture::ClientFormat::U8U8U8,
+            },
+        )
+        .unwrap()
+    } else {
+        glium::texture::SrgbTexture2d::empty(&display.0, PLOT_WIDTH, PLOT_HEIGHT).unwrap()
     }
-
-    let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
-
-    glium::texture::SrgbTexture2d::new(
-        &display.0,
-        glium::texture::RawImage2d {
-            data: Cow::Borrowed(&buffer_reversed),
-            width: PLOT_WIDTH,
-            height: PLOT_HEIGHT,
-            format: glium::texture::ClientFormat::U8U8U8,
-        },
-    )
-    .unwrap()
 }
 
 fn render_conrod_plot<'a, 'b>(
