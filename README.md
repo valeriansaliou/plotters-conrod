@@ -11,7 +11,7 @@ This is an implementation of a Conrod backend for Plotters. This is more efficie
 
 * The [MakAir](https://makair.life/) ventilator, on its Rust-based [MakAir Control UI](https://github.com/makers-for-life/makair-control-ui/);
 
-## What is `plotters`?
+## What is Plotters?
 
 Plotters is an extensible Rust drawing library that can be used to plot data on nice-looking graphs, rendering them through a plotting backend (eg. to a Bitmap image raw buffer, to your GUI backend, to an SVG file, etc.).
 
