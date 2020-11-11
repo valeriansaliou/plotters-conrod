@@ -13,7 +13,9 @@ This is an implementation of a Conrod backend for Plotters. This is more efficie
 
 ## What is `plotters`?
 
-For more details on Plotters, please check the following links:
+Plotters is an extensible Rust drawing library that can be used to plot data on nice-looking graphs, rendering them through a plotting backend (eg. to a Bitmap image raw buffer, to your GUI backend, to an SVG file, etc.).
+
+**For more details on Plotters, please check the following links:**
 
 - For an introduction of Plotters, see: [Plotters on Crates.io](https://crates.io/crates/plotters);
 - Check the main repository on [GitHub](https://github.com/38/plotters);
