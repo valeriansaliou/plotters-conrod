@@ -272,7 +272,7 @@ fn plot(
     drop(chart);
     drop(drawing);
 
-    let buffer_reversed = reverse_rgb_fast(&buffer_rgb, WINDOW_WIDTH, WINDOW_HEIGHT);
+    let buffer_reversed = reverse_rgb(&buffer_rgb, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     glium::texture::SrgbTexture2d::new(
         &display.0,
@@ -286,7 +286,7 @@ fn plot(
     .unwrap()
 }
 
-fn reverse_rgb_fast(image: &[u8], width: u32, height: u32) -> Vec<u8> {
+fn reverse_rgb(image: &[u8], width: u32, height: u32) -> Vec<u8> {
     // Reverses an image over the Y axis, so that it is displayed on screen correctly, as the \
     //   renderer works on an inverted Y axis.
     // Notice: this is a more efficient implementation for RGB images, which is not the norm over \
