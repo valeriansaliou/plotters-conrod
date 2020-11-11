@@ -9,11 +9,12 @@ extern crate conrod_core;
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
+use std::path::Path;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use chrono;
-use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
+use conrod_core::{self as conrod, Colorable, Positionable, Sizeable, Widget};
 use conrod_glium;
 use conrod_winit::WinitWindow;
 use glium::{self, Surface};
@@ -21,8 +22,13 @@ use plotters::prelude::*;
 use plotters::style::TextStyle;
 use psutil::*;
 
-const WINDOW_WIDTH: u32 = 800;
-const WINDOW_HEIGHT: u32 = 480;
+const PLOT_WIDTH: u32 = 800;
+const PLOT_HEIGHT: u32 = 480;
+
+const WINDOW_WIDTH: u32 = PLOT_WIDTH;
+const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
+
+const TITLE_FONT_SIZE: u32 = 18;
 
 const PLOT_SECONDS: usize = 10;
 
@@ -45,7 +51,8 @@ pub enum EventsHandlerOutcome {
 }
 
 pub struct ImageIds {
-    pub plot: conrod::image::Id,
+    pub bitmap_plot: conrod::image::Id,
+    pub conrod_plot: conrod::image::Id, // TODO: remove this
 }
 
 impl WinitWindow for GliumDisplayWinitWrapper {
@@ -122,16 +129,19 @@ impl EventsHandler {
 impl ImageIds {
     pub fn new(
         image_map: &mut conrod_core::image::Map<glium::texture::SrgbTexture2d>,
-        plot_texture: glium::texture::SrgbTexture2d,
+        bitmap_plot_texture: glium::texture::SrgbTexture2d,
+        conrod_plot_texture: glium::texture::SrgbTexture2d,
     ) -> ImageIds {
         ImageIds {
-            plot: image_map.insert(plot_texture),
+            bitmap_plot: image_map.insert(bitmap_plot_texture),
+            conrod_plot: image_map.insert(conrod_plot_texture), // TODO: remove this
         }
     }
 }
 
 conrod_winit::conversion_fns!();
-widget_ids!(struct Ids { plot });
+
+widget_ids!(struct Ids { bitmap_wrapper, bitmap_text, bitmap_plot, conrod_wrapper, conrod_text, conrod_plot });
 
 fn main() {
     // Bootstrap Glium
@@ -158,6 +168,16 @@ fn main() {
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
 
+    // Load fonts
+    let _font_regular = interface
+        .fonts
+        .insert_from_file(Path::new("./examples/fonts/notosans-regular.ttf"))
+        .unwrap();
+    let font_bold = interface
+        .fonts
+        .insert_from_file(Path::new("./examples/fonts/notosans-bold.ttf"))
+        .unwrap();
+
     // Bootstrap CPU percent collector
     let mut cpu_percent_collector = cpu::CpuPercentCollector::new().unwrap();
     let (mut cpu_last_sample_value, mut cpu_last_sample_time) = (0, Instant::now());
@@ -165,7 +185,25 @@ fn main() {
         VecDeque::with_capacity(FRAME_TICK_RATE * PLOT_SECONDS);
 
     // Bootstrap images map
-    let image_ids = ImageIds::new(&mut image_map, plot(&display, &mut data_points, 0));
+    let image_ids = ImageIds::new(
+        &mut image_map,
+        plot(&display, &mut data_points, 0),
+        plot(&display, &mut data_points, 0),
+    );
+
+    // Initialize common canvas style
+    let mut canvas_style = conrod::widget::canvas::Style::default();
+
+    canvas_style.border = Some(0.0);
+    canvas_style.border_color = Some(conrod::color::TRANSPARENT);
+    canvas_style.color = Some(conrod::color::TRANSPARENT);
+
+    // Initialize common title text style
+    let mut title_text_style = conrod_core::widget::primitive::text::Style::default();
+
+    title_text_style.font_id = Some(Some(font_bold));
+    title_text_style.color = Some(conrod::color::RED);
+    title_text_style.font_size = Some(TITLE_FONT_SIZE);
 
     // Start evens handler
     let mut events_handler = EventsHandler::new();
@@ -191,15 +229,44 @@ fn main() {
             let mut ui = interface.set_widgets();
 
             image_map.replace(
-                image_ids.plot,
+                image_ids.bitmap_plot,
                 plot(&display, &mut data_points, cpu_last_sample_value),
             );
 
-            conrod::widget::Image::new(image_ids.plot)
-                .w_h(WINDOW_WIDTH as _, WINDOW_HEIGHT as _)
-                .middle()
-                .set(ids.plot, &mut ui);
+            // Draw Bitmap chart
+            conrod::widget::canvas::Canvas::new()
+                .with_style(canvas_style)
+                .top_left()
+                .set(ids.bitmap_wrapper, &mut ui);
 
+            conrod::widget::Image::new(image_ids.bitmap_plot)
+                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                .top_left_of(ids.bitmap_wrapper)
+                .set(ids.bitmap_plot, &mut ui);
+
+            conrod::widget::Text::new("Bitmap chart")
+                .with_style(title_text_style)
+                .top_left_of(ids.bitmap_wrapper)
+                .set(ids.bitmap_text, &mut ui);
+
+            // Draw Conrod chart
+            conrod::widget::canvas::Canvas::new()
+                .with_style(canvas_style)
+                .down_from(ids.bitmap_plot, 0.0)
+                .set(ids.conrod_wrapper, &mut ui);
+
+            conrod::widget::Image::new(image_ids.conrod_plot)
+                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                .top_left_of(ids.conrod_wrapper)
+                .set(ids.conrod_plot, &mut ui);
+
+            conrod::widget::Text::new("Conrod chart")
+                .with_style(title_text_style)
+                .top_left_of(ids.conrod_wrapper)
+                .set(ids.conrod_text, &mut ui);
+
+            // Force a redraw, so that the graph updates itself (due to a bug in Conrod, where \
+            //   replacing an image in the image map does not properly request a redraw)
             ui.needs_redraw();
         }
 
@@ -236,10 +303,10 @@ fn plot(
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     cpu_last_sample_value: i32,
 ) -> glium::texture::SrgbTexture2d {
-    let mut buffer_rgb: Vec<u8> = vec![0; (WINDOW_WIDTH * WINDOW_HEIGHT * 3) as usize];
+    let mut buffer_rgb: Vec<u8> = vec![0; (PLOT_WIDTH * PLOT_HEIGHT * 3) as usize];
 
-    let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (WINDOW_WIDTH, WINDOW_HEIGHT))
-        .into_drawing_area();
+    let drawing =
+        BitMapBackend::with_buffer(&mut buffer_rgb, (PLOT_WIDTH, PLOT_HEIGHT)).into_drawing_area();
 
     // Truncate to maximum size & clean expired points
     data_points.truncate(FRAME_TICK_RATE * PLOT_SECONDS - 1);
@@ -300,14 +367,14 @@ fn plot(
     drop(chart);
     drop(drawing);
 
-    let buffer_reversed = reverse_rgb(&buffer_rgb, WINDOW_WIDTH, WINDOW_HEIGHT);
+    let buffer_reversed = reverse_rgb(&buffer_rgb, PLOT_WIDTH, PLOT_HEIGHT);
 
     glium::texture::SrgbTexture2d::new(
         &display.0,
         glium::texture::RawImage2d {
             data: Cow::Borrowed(&buffer_reversed),
-            width: WINDOW_WIDTH,
-            height: WINDOW_HEIGHT,
+            width: PLOT_WIDTH,
+            height: PLOT_HEIGHT,
             format: glium::texture::ClientFormat::U8U8U8,
         },
     )
