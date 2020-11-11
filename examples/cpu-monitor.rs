@@ -10,7 +10,7 @@ extern crate conrod_core;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono;
 use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
@@ -24,10 +24,11 @@ use psutil::*;
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 480;
 
-const PLOT_POINTS: usize = 30;
+const PLOT_SECONDS: usize = 10;
 
-const SAMPLES_PER_SECOND: usize = 10;
-const SAMPLE_TICK_WAIT: Duration = Duration::from_millis(1000 / SAMPLES_PER_SECOND as u64);
+const SAMPLES_PER_SECOND: usize = 30;
+const SAMPLE_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / SAMPLES_PER_SECOND as u64);
+const SAMPLE_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 pub struct EventLoop;
@@ -158,7 +159,7 @@ fn main() {
     // Bootstrap CPU percent collector
     let mut cpu_percent_collector = cpu::CpuPercentCollector::new().unwrap();
     let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, u8)> =
-        VecDeque::with_capacity(PLOT_POINTS);
+        VecDeque::with_capacity(SAMPLES_PER_SECOND * PLOT_SECONDS);
 
     // Bootstrap images map
     let image_ids = ImageIds::new(
@@ -171,6 +172,8 @@ fn main() {
 
     // Start drawing loop
     'main: loop {
+        let tick_start_time = Instant::now();
+
         // Handle incoming UI events (ie. from the window, eg. 'ESC' key is pressed)
         match events_handler.handle(&display, &mut interface, &mut events_loop) {
             EventsHandlerOutcome::Break => break 'main,
@@ -207,7 +210,18 @@ fn main() {
             target.finish().unwrap();
         }
 
-        thread::sleep(SAMPLE_TICK_WAIT);
+        let tick_spent_time = tick_start_time.elapsed();
+
+        // FPS limiter, also makes sure to account for each loop processing time in the current \
+        //   limit, as to 'guarantee' that we converge to the target FPS in any case.
+        thread::sleep(if SAMPLE_TICK_WAIT_NORMAL > tick_spent_time {
+            std::cmp::max(
+                SAMPLE_TICK_WAIT_NORMAL - tick_spent_time,
+                SAMPLE_TICK_WAIT_MINIMUM,
+            )
+        } else {
+            SAMPLE_TICK_WAIT_MINIMUM
+        });
     }
 }
 
@@ -221,10 +235,20 @@ fn plot(
     let drawing = BitMapBackend::with_buffer(&mut buffer_rgb, (WINDOW_WIDTH, WINDOW_HEIGHT))
         .into_drawing_area();
 
-    // Sample current CPU usage and append to data points (pop expired points)
+    // Sample current CPU usage and append to data points
     let cpu_percent = cpu_percent_collector.cpu_percent().unwrap();
 
-    data_points.truncate(PLOT_POINTS - 1);
+    // Truncate to maximum size & clean expired points
+    data_points.truncate(SAMPLES_PER_SECOND * PLOT_SECONDS - 1);
+
+    if !data_points.is_empty() {
+        let older = data_points.front().unwrap().0 - chrono::Duration::seconds(PLOT_SECONDS as _);
+
+        while data_points.back().map(|p| p.0 < older).unwrap_or(false) {
+            data_points.pop_back();
+        }
+    }
+
     data_points.push_front((chrono::Utc::now(), cpu_percent as u8));
 
     // Acquire time range
@@ -235,25 +259,26 @@ fn plot(
             0,
         ))
         .0;
-    let oldest_time =
-        newest_time - chrono::Duration::seconds((SAMPLES_PER_SECOND * PLOT_POINTS) as i64);
+    let oldest_time = newest_time - chrono::Duration::seconds(PLOT_SECONDS as i64);
 
     let mut chart = ChartBuilder::on(&drawing)
         .x_label_area_size(0)
         .y_label_area_size(28)
+        .margin(20)
         .build_cartesian_2d(oldest_time..newest_time, 0..100)
         .expect("failed to build chart");
 
     chart
         .configure_mesh()
-        .bold_line_style(&plotters::style::colors::BLACK.mix(0.22))
-        .light_line_style(&plotters::style::colors::BLACK)
+        .bold_line_style(&plotters::style::colors::WHITE.mix(0.1))
+        .light_line_style(&plotters::style::colors::WHITE.mix(0.05))
         .y_labels(10)
         .y_label_style(TextStyle::from(
             ("sans-serif", 15)
                 .into_font()
-                .color(&plotters::style::colors::BLACK),
+                .color(&plotters::style::colors::WHITE.mix(0.65)),
         ))
+        .y_label_formatter(&|y| format!("{}%", y))
         .draw()
         .expect("failed to draw chart mesh");
 
@@ -261,11 +286,11 @@ fn plot(
         .draw_series(
             LineSeries::new(
                 data_points.iter().map(|x| (x.0, x.1 as i32)),
-                ShapeStyle::from(&plotters::style::colors::BLACK)
+                ShapeStyle::from(&plotters::style::colors::WHITE)
                     .filled()
-                    .stroke_width(1),
+                    .stroke_width(2),
             )
-            .point_size(2),
+            .point_size(0),
         )
         .expect("failed to draw chart data");
 
