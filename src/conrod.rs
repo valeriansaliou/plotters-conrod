@@ -15,15 +15,15 @@ use plotters_backend::{
 struct ConrodBackendColor(conrod::color::Color);
 
 #[derive(Debug)]
-pub struct DummyBackendError;
+pub struct ConrodBackendError;
 
-impl std::fmt::Display for DummyBackendError {
+impl std::fmt::Display for ConrodBackendError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(fmt, "{:?}", self)
     }
 }
 
-impl std::error::Error for DummyBackendError {}
+impl std::error::Error for ConrodBackendError {}
 
 pub struct ConrodBackend<'a, 'b> {
     ui: &'a mut conrod::UiCell<'b>,
@@ -76,17 +76,17 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
 }
 
 impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
-    type ErrorType = DummyBackendError;
+    type ErrorType = ConrodBackendError;
 
     fn get_size(&self) -> (u32, u32) {
         self.size
     }
 
-    fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
+    fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<ConrodBackendError>> {
         Ok(())
     }
 
-    fn present(&mut self) -> Result<(), DrawingErrorKind<DummyBackendError>> {
+    fn present(&mut self) -> Result<(), DrawingErrorKind<ConrodBackendError>> {
         Ok(())
     }
 
