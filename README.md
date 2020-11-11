@@ -46,7 +46,7 @@ plotters-conrod = "0.3.0"
 
 ## Run the examples
 
-### Example #1: cpu-monitor
+### 1️⃣ `cpu-monitor`
 
 This example samples your CPU load every second, and renders it in real-time charts:
 
