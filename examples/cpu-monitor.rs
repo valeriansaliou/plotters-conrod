@@ -25,6 +25,8 @@ use psutil::*;
 
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
+const PLOT_PIXELS: usize = (PLOT_WIDTH * PLOT_HEIGHT) as usize;
+const PLOT_SECONDS: usize = 10;
 
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
 const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
@@ -32,8 +34,6 @@ const WINDOW_HEIGHT: u32 = PLOT_HEIGHT * 2;
 const TITLE_FONT_SIZE: u32 = 22;
 const TITLE_MARGIN_LEFT: f64 = 10.0;
 const TITLE_MARGIN_TOP: f64 = 8.0;
-
-const PLOT_SECONDS: usize = 10;
 
 const SAMPLE_EVERY: Duration = Duration::from_secs(1);
 
@@ -147,7 +147,8 @@ widget_ids!(struct Ids {
     bitmap_plot,
     conrod_wrapper,
     conrod_text,
-    conrod_plot
+    conrod_plot_points[],
+    conrod_plot_lines[],
 });
 
 fn main() {
@@ -170,7 +171,13 @@ fn main() {
     let display =
         GliumDisplayWinitWrapper(glium::Display::new(window, context, &events_loop).unwrap());
 
-    let ids = Ids::new(interface.widget_id_generator());
+    let mut ids = Ids::new(interface.widget_id_generator());
+
+    ids.conrod_plot_points
+        .resize(PLOT_PIXELS, &mut interface.widget_id_generator());
+    ids.conrod_plot_lines
+        .resize(PLOT_PIXELS, &mut interface.widget_id_generator());
+
     let mut image_map = conrod::image::Map::<glium::texture::SrgbTexture2d>::new();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
@@ -214,9 +221,6 @@ fn main() {
     // Start evens handler
     let mut events_handler = EventsHandler::new();
 
-    // Create re-usable Conrod plotters backend
-    let conrod_drawing = ConrodBackend::new((PLOT_WIDTH, PLOT_HEIGHT)).into_drawing_area();
-
     // Start drawing loop
     'main: loop {
         let tick_start_time = Instant::now();
@@ -253,18 +257,17 @@ fn main() {
         {
             let mut ui = interface.set_widgets();
 
+            // Draw Bitmap chart
+            conrod::widget::canvas::Canvas::new()
+                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                .with_style(canvas_style)
+                .top_left()
+                .set(ids.bitmap_wrapper, &mut ui);
+
             image_map.replace(
                 image_ids.bitmap_plot,
                 render_bitmap_plot(&display, &mut data_points),
             );
-
-            render_conrod_plot(&display, &mut data_points, ids.conrod_plot, &conrod_drawing);
-
-            // Draw Bitmap chart
-            conrod::widget::canvas::Canvas::new()
-                .with_style(canvas_style)
-                .top_left()
-                .set(ids.bitmap_wrapper, &mut ui);
 
             conrod::widget::Image::new(image_ids.bitmap_plot)
                 .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
@@ -278,9 +281,12 @@ fn main() {
 
             // Draw Conrod chart
             conrod::widget::canvas::Canvas::new()
+                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
                 .with_style(canvas_style)
-                .down_from(ids.bitmap_plot, 0.0)
+                .down_from(ids.bitmap_wrapper, 0.0)
                 .set(ids.conrod_wrapper, &mut ui);
+
+            render_conrod_plot(&mut ui, &mut data_points, &ids);
 
             conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
@@ -326,7 +332,7 @@ fn render_bitmap_plot(
     display: &GliumDisplayWinitWrapper,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
 ) -> glium::texture::SrgbTexture2d {
-    let mut buffer_rgb: Vec<u8> = vec![0; (PLOT_WIDTH * PLOT_HEIGHT * 3) as usize];
+    let mut buffer_rgb: Vec<u8> = vec![0; PLOT_PIXELS * 3];
 
     // Switch context so that we can re-use 'buffer_rgb' later in read mode (mutable here)
     {
@@ -350,12 +356,20 @@ fn render_bitmap_plot(
     .unwrap()
 }
 
-fn render_conrod_plot(
-    _display: &GliumDisplayWinitWrapper,
+fn render_conrod_plot<'a, 'b>(
+    ui: &'a mut conrod::UiCell<'b>,
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
-    _conrod_plot_id: conrod::widget::Id,
-    conrod_drawing: &DrawingArea<ConrodBackend, plotters::coord::Shift>,
+    ids: &'b Ids,
 ) {
+    let conrod_drawing = ConrodBackend::new(
+        ui,
+        (PLOT_WIDTH, PLOT_HEIGHT),
+        ids.conrod_wrapper,
+        &ids.conrod_plot_points,
+        &ids.conrod_plot_lines,
+    )
+    .into_drawing_area();
+
     plot(data_points, &conrod_drawing);
 
     // TODO
