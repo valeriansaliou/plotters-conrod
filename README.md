@@ -43,3 +43,15 @@ plotters-conrod = "0.3.0"
 ## How to use?
 
 🚧 TODO
+
+## Run the examples
+
+### `cpu-monitor`
+
+This example samples your CPU load every second, and renders it in real-time charts:
+
+```sh
+cargo run --release --example cpu-monitor
+```
+
+_The first plot uses the default Bitmap backend as a reference, while the second plot uses `plotters-conrod`. This can be used to compare the output and performance of both plotting backends._
