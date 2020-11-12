@@ -22,8 +22,13 @@ struct ConrodBackendPosition {
 struct ConrodBackendColor(conrod::color::Color);
 
 #[derive(Debug)]
-pub struct ConrodBackendError;
+/// Indicates that some error occured within the Conrod backend
+pub enum ConrodBackendError {
+    /// The parent widget position could not be acquired, is the parent widget drawn in Conrod?
+    NoParentPosition,
+}
 
+/// The Conrod drawing backend
 pub struct ConrodBackend<'a, 'b> {
     ui: &'a mut conrod::UiCell<'b>,
     size: (u32, u32),
@@ -32,6 +37,7 @@ pub struct ConrodBackend<'a, 'b> {
     graph: &'a mut ConrodBackendReusableGraph,
 }
 
+/// The re-usable graph of Conrod widget IDs, to be re-used for each plot draw (building it is expensive, re-using it is cheap)
 pub struct ConrodBackendReusableGraph {
     line: ConrodBackendReusableGraphAtom,
     rect: ConrodBackendReusableGraphAtom,
@@ -117,9 +123,13 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             )
             .top_left_of(self.parent)
             .set(self.graph.line.next(&mut self.ui), &mut self.ui);
-        }
 
-        Ok(())
+            Ok(())
+        } else {
+            Err(DrawingErrorKind::DrawingError(
+                ConrodBackendError::NoParentPosition,
+            ))
+        }
     }
 
     fn draw_rect<S: BackendStyle>(
@@ -175,9 +185,13 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             )
             .top_left_of(self.parent)
             .set(self.graph.path.next(&mut self.ui), &mut self.ui);
-        }
 
-        Ok(())
+            Ok(())
+        } else {
+            Err(DrawingErrorKind::DrawingError(
+                ConrodBackendError::NoParentPosition,
+            ))
+        }
     }
 
     fn draw_circle<S: BackendStyle>(
@@ -231,9 +245,13 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             )
             .top_left_of(self.parent)
             .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
-        }
 
-        Ok(())
+            Ok(())
+        } else {
+            Err(DrawingErrorKind::DrawingError(
+                ConrodBackendError::NoParentPosition,
+            ))
+        }
     }
 
     fn draw_text<S: BackendTextStyle>(
