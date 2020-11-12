@@ -88,6 +88,8 @@ As Conrod is known to be quite inefficient at rendering image widgets at any hig
 
 The default Plotters rasterizer has been disabled in that case, as to avoid rendering performance to be degraded without the library user noticing. This guarantees that the GPU is used for rendering, while the CPU does minimal work.
 
+Also, note that a single font family (ie. `serif`, `sans-serif`, etc.) and font style (ie. `regular`, `bold`, etc.) is supported for text rendering. The reason to that, is that Conrod makes it quite tedious to load fonts and pass them over, so we better off limit this backend API to a single font for simplicity's sake. As well, font transforms are not supported due to the underlying Conrod renderer, which does not seem to support eg. rotations.
+
 _It means that, some complex plot types may not render well._ Though, rest assured that common plot types have been tested to render exactly as expected, eg. `LineSeries` or `Histogram`.
 
 There are plans to implement those pixel-based rendering methods in the future. If you already have an implementation, feel free to PR this library!

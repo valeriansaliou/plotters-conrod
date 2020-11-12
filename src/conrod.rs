@@ -316,7 +316,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             text_anchor::HPos::Center => conrod::text::Justify::Center,
         });
 
-        // TODO: support transform and style
         conrod::widget::Text::new(text)
             .with_style(text_style)
             .top_left_with_margins_on(
