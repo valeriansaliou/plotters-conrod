@@ -82,7 +82,7 @@ let drawing = ConrodBackend::new(
 //-
 ```
 
-If you are looking for a full example of an implementation, please check [cpu-monitor.rs](./examples/cpu-monitor.rs).
+_If you are looking for a full example of an implementation, please check [cpu-monitor.rs](./examples/cpu-monitor.rs)._
 
 ## How to run the examples?
 
