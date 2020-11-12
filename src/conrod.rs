@@ -37,7 +37,7 @@ pub struct ConrodBackend<'a, 'b> {
     graph: &'a mut ConrodBackendReusableGraph,
 }
 
-/// The re-usable graph of Conrod widget IDs, to be re-used for each plot draw (building it is expensive, re-using it is cheap)
+/// The re-usable graph of Conrod widget IDs, to be re-used for each plot draw (building it is expensive, re-using it is cheap; so build it once and re-use it across loop calls)
 pub struct ConrodBackendReusableGraph {
     line: ConrodBackendReusableGraphAtom,
     rect: ConrodBackendReusableGraphAtom,
