@@ -42,6 +42,8 @@ Include `plotters-conrod` in your `Cargo.toml` dependencies:
 plotters-conrod = "0.3.0"
 ```
 
+_The `plotters-conrod` version used should match your `plotters` version. If there is no such `plotters-conrod` yet, using an older `plotters-conrod` version than your `plotters` should usually work._
+
 ## How to use?
 
 First, import `ConrodBackend`:
