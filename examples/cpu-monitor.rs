@@ -18,14 +18,13 @@ use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
 use plotters::style::TextStyle;
-use plotters_conrod::{ConrodBackend, ConrodBackendIds};
+use plotters_conrod::{ConrodBackend, ConrodBackendReusableGraph};
 use psutil::*;
 
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
 const PLOT_PIXELS: usize = (PLOT_WIDTH * PLOT_HEIGHT) as usize;
 const PLOT_SECONDS: usize = 10;
-const PLOT_IDS_MAXIMUM: usize = 1000;
 const PLOT_LINE_COLOR: RGBColor = plotters::style::RGBColor(0, 196, 255);
 
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
@@ -47,7 +46,7 @@ const FRAME_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / FRAME_TICK
 const FRAME_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
 
 // This can be used to disable the reference Bitmap chart
-const REFERENCE_BITMAP_ENABLED: bool = true;
+const REFERENCE_BITMAP_ENABLED: bool = false;
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 pub struct EventLoop;
@@ -154,13 +153,7 @@ widget_ids!(struct Ids {
     bitmap_text,
     bitmap_plot,
     conrod_wrapper,
-    conrod_text,
-    conrod_plot_points_line[],
-    conrod_plot_points_rect[],
-    conrod_plot_points_path[],
-    conrod_plot_points_circle[],
-    conrod_plot_points_text[],
-    conrod_plot_points_fill[],
+    conrod_text
 });
 
 fn main() {
@@ -183,23 +176,9 @@ fn main() {
     let display =
         GliumDisplayWinitWrapper(glium::Display::new(window, context, &events_loop).unwrap());
 
-    let mut ids = Ids::new(interface.widget_id_generator());
-
-    ids.conrod_plot_points_line
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
-    ids.conrod_plot_points_rect
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
-    ids.conrod_plot_points_path
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
-    ids.conrod_plot_points_circle
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
-    ids.conrod_plot_points_text
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
-    ids.conrod_plot_points_fill
-        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
+    let ids = Ids::new(interface.widget_id_generator());
 
     let mut image_map = conrod::image::Map::<glium::texture::SrgbTexture2d>::new();
-
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
 
     // Load fonts
@@ -223,6 +202,9 @@ fn main() {
         &mut image_map,
         render_bitmap_plot(&display, &mut data_points),
     );
+
+    // Bootstrap Conrod backend IDs graph
+    let mut conrod_graph = ConrodBackendReusableGraph::new();
 
     // Initialize common canvas style
     let mut canvas_style = conrod::widget::canvas::Style::default();
@@ -284,7 +266,7 @@ fn main() {
                 .top_left()
                 .set(ids.conrod_wrapper, &mut ui);
 
-            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular);
+            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular, &mut conrod_graph);
 
             conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
@@ -388,20 +370,14 @@ fn render_conrod_plot<'a, 'b>(
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     ids: &'b Ids,
     font: conrod_core::text::font::Id,
+    graph: &mut ConrodBackendReusableGraph
 ) {
     let conrod_drawing = ConrodBackend::new(
         ui,
         (PLOT_WIDTH, PLOT_HEIGHT),
         ids.conrod_wrapper,
         font,
-        ConrodBackendIds {
-            line: &ids.conrod_plot_points_line,
-            rect: &ids.conrod_plot_points_rect,
-            path: &ids.conrod_plot_points_path,
-            circle: &ids.conrod_plot_points_circle,
-            text: &ids.conrod_plot_points_text,
-            fill: &ids.conrod_plot_points_fill,
-        }
+        graph
     )
     .into_drawing_area();
 

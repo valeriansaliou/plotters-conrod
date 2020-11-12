@@ -12,7 +12,7 @@ use plotters_backend::{
     DrawingErrorKind,
 };
 
-const BACKEND_GRAPH_RESIZE_CHUNK: usize = 20;
+const BACKEND_GRAPH_RESIZE_CHUNK: usize = 100;
 
 struct ConrodBackendPosition {
     x_start: i32,
@@ -29,28 +29,19 @@ pub struct ConrodBackend<'a, 'b> {
     size: (u32, u32),
     parent: conrod::widget::Id,
     font: conrod::text::font::Id,
-    graph: ConrodBackendGraphNest<'b>,
+    graph: &'a mut ConrodBackendReusableGraph,
 }
 
-pub struct ConrodBackendIds<'a> {
-    pub line: &'a conrod::widget::id::List,
-    pub rect: &'a conrod::widget::id::List,
-    pub path: &'a conrod::widget::id::List,
-    pub circle: &'a conrod::widget::id::List,
-    pub text: &'a conrod::widget::id::List,
-    pub fill: &'a conrod::widget::id::List,
+pub struct ConrodBackendReusableGraph {
+    line: ConrodBackendReusableGraphAtom,
+    rect: ConrodBackendReusableGraphAtom,
+    path: ConrodBackendReusableGraphAtom,
+    circle: ConrodBackendReusableGraphAtom,
+    text: ConrodBackendReusableGraphAtom,
+    fill: ConrodBackendReusableGraphAtom,
 }
 
-struct ConrodBackendGraph<'a>(&'a conrod::widget::id::List, usize);
-
-struct ConrodBackendGraphNest<'a> {
-    line: ConrodBackendGraph<'a>,
-    rect: ConrodBackendGraph<'a>,
-    path: ConrodBackendGraph<'a>,
-    circle: ConrodBackendGraph<'a>,
-    text: ConrodBackendGraph<'a>,
-    fill: ConrodBackendGraph<'a>,
-}
+struct ConrodBackendReusableGraphAtom(conrod::widget::id::List, usize);
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
     pub fn new(
@@ -58,16 +49,14 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         size: (u32, u32),
         parent: conrod::widget::Id,
         font: conrod::text::font::Id,
-        ids: ConrodBackendIds<'b>,
+        graph: &'a mut ConrodBackendReusableGraph,
     ) -> Self {
-        // TODO: instantiate sub-widget ids from there? (check performance impact if they are local)
-
         Self {
             ui,
             parent,
             font,
             size,
-            graph: ConrodBackendGraphNest::from_ids(&ids),
+            graph,
         }
     }
 }
@@ -80,6 +69,11 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     }
 
     fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<ConrodBackendError>> {
+        // Important: prepare the IDs graph, and reset all incremented IDs counters back to zero; \
+        //   if we do not do that, counts will increment forever and the graph will be enlarged \
+        //   infinitely, which would result in a huge memory leak.
+        self.graph.prepare();
+
         Ok(())
     }
 
@@ -122,7 +116,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.line.next(&self.ui), &mut self.ui);
+            .set(self.graph.line.next(&mut self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -155,7 +149,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             rectangle_style,
         )
         .top_left_with_margins_on(self.parent, upper_left.1 as _, upper_left.0 as _)
-        .set(self.graph.rect.next(&self.ui), &mut self.ui);
+        .set(self.graph.rect.next(&mut self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -180,7 +174,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.path.next(&self.ui), &mut self.ui);
+            .set(self.graph.path.next(&mut self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -211,7 +205,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 (center.1 - radius as i32) as f64,
                 (center.0 - radius as i32) as f64,
             )
-            .set(self.graph.circle.next(&self.ui), &mut self.ui);
+            .set(self.graph.circle.next(&mut self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -238,7 +232,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 polygon_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.fill.next(&self.ui), &mut self.ui);
+            .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -271,7 +265,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as f64 - (style.size() / 2.0),
                 pos.0 as f64 - text_width_estimated,
             )
-            .set(self.graph.text.next(&self.ui), &mut self.ui);
+            .set(self.graph.text.next(&mut self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -363,46 +357,72 @@ impl ConrodBackendColor {
     }
 }
 
-impl<'a> ConrodBackendGraphNest<'a> {
-    fn from_ids(ids: &ConrodBackendIds<'a>) -> Self {
+impl ConrodBackendReusableGraph {
+    pub fn new() -> Self {
         Self {
-            line: ConrodBackendGraph::from(ids.line),
-            rect: ConrodBackendGraph::from(ids.rect),
-            path: ConrodBackendGraph::from(ids.path),
-            circle: ConrodBackendGraph::from(ids.circle),
-            text: ConrodBackendGraph::from(ids.text),
-            fill: ConrodBackendGraph::from(ids.fill),
+            line: ConrodBackendReusableGraphAtom::new(),
+            rect: ConrodBackendReusableGraphAtom::new(),
+            path: ConrodBackendReusableGraphAtom::new(),
+            circle: ConrodBackendReusableGraphAtom::new(),
+            text: ConrodBackendReusableGraphAtom::new(),
+            fill: ConrodBackendReusableGraphAtom::new(),
         }
+    }
+
+    fn prepare(&mut self) {
+        // Notice: destructuring is used there as a safety measure, so that no field is \
+        //   forgotten, which could be dangerous (ie. risk of memory leak).
+        let Self {
+            line,
+            rect,
+            path,
+            circle,
+            text,
+            fill,
+        } = self;
+
+        // Proceed all resets
+        line.reset();
+        rect.reset();
+        path.reset();
+        circle.reset();
+        text.reset();
+        fill.reset();
     }
 }
 
-impl<'a> ConrodBackendGraph<'a> {
-    fn from(list: &'a conrod::widget::id::List) -> Self {
-        Self(list, 0)
+impl ConrodBackendReusableGraphAtom {
+    fn new() -> Self {
+        Self(conrod::widget::id::List::new(), 0)
     }
 
-    fn next(&mut self, ui: &conrod::UiCell) -> conrod::widget::Id {
+    fn next(&mut self, ui: &mut conrod::UiCell) -> conrod::widget::Id {
         // Acquire current index (ie. last 'next index')
         let current_index = self.1;
-
-        // Mutate state for next index
-        self.1 += 1;
 
         // IDs list has not a large-enough capacity for all dynamically-allocated IDs? Enlarge it \
         //   by a pre-defined chunk size (this prevents enlarging the list one by one, requiring \
         //   frequent re-allocations)
-        // Notice: this upsizes the graph list to allow next ID to be stored, but may be used to \
-        //   store current ID as well if the list starts from a length of zero and this is the \
-        //   first call to 'next()'.
-        // TODO: enable this please
-        // if self.1 >= self.0.len() {
-        //     self.0.resize(
-        //         self.0.len() + BACKEND_GRAPH_RESIZE_CHUNK,
-        //         &mut ui.widget_id_generator(),
-        //     );
-        // }
+        // Notice: this upsizes the graph list to allow current ID to be stored. This is always \
+        //   called on the very first call, and may be periodically called whenever the last \
+        //   chunked upsize was not enough to store all IDs. This is a trade-off between memory \
+        //   and performances.
+        if current_index >= self.0.len() {
+            self.0.resize(
+                self.0.len() + BACKEND_GRAPH_RESIZE_CHUNK,
+                &mut ui.widget_id_generator(),
+            );
+        }
+
+        // Mutate state for next index
+        self.1 += 1;
 
         self.0[current_index]
+    }
+
+    fn reset(&mut self) {
+        // Rollback the incremented IDs counter back to zero
+        self.1 = 0;
     }
 }
 

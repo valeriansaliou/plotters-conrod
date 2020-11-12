@@ -6,4 +6,4 @@
 
 mod conrod;
 
-pub use conrod::{ConrodBackend, ConrodBackendIds};
+pub use conrod::{ConrodBackend, ConrodBackendReusableGraph};
