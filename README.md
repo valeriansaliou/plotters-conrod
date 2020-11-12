@@ -46,26 +46,35 @@ _The `plotters-conrod` version used should match your `plotters` version. If the
 
 ## How to use?
 
-First, import `ConrodBackend`:
+First, import `ConrodBackend` and `ConrodBackendReusableGraph`:
 
 ```rust
-use plotters_conrod::ConrodBackend;
+use plotters_conrod::{ConrodBackend, ConrodBackendReusableGraph};
 ```
 
-Then, for each frame you draw, call:
+Then, build the re-usable graph instance (outside of your drawing loop):
 
 ```rust
-// Notes:
-// 'ids.parent' is the WidgetId of the canvas that contains your plot;
-// 'ids.points' is a List of WidgetId, pre-allocated to a large-enough number \
-//   of WidgetId so that all Conrod primitives can be inserted as to draw the \
-//   full graph. If this number is too low, your app will panic.
+let mut conrod_graph = ConrodBackendReusableGraph::build();
+```
+
+**⚠️ This should be put outside of your loop and called once; failing to do so will result in heavy CPU usage due to the graph being rebuilt for every frame!**
+
+Finally, for each frame you draw (ie. your main loop), call:
+
+```rust
+// Where:
+//  - 'ui' is the UiCell that was derived from Ui for this frame;
+//  - '(plot_width, plot_height)' is the size of your plot in pixels (make sure it matches its parent canvas size);
+//  - 'ids.parent' is the WidgetId of the canvas that contains your plot (of the same size than the plot itself);
+//  - 'fonts.regular' is the font::Id of the font to use to draw text (ie. a Conrod font identifier);
+//  - 'conrod_graph' is a mutable reference to the graph instance you built outside of the drawing loop (pass it as a mutable reference);
 let drawing = ConrodBackend::new(
     ui,
     (plot_width, plot_height),
     ids.parent,
     fonts.regular,
-    &ids.points,
+    &mut conrod_graph,
 ).into_drawing_area();
 
 //-
