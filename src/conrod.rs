@@ -211,8 +211,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 .thickness(style.stroke_width() as _);
 
             // Render point path widget
-            // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
-            //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
             conrod::widget::point_path::PointPath::abs_styled(
                 path.into_iter()
                     .map(|point| position.abs_point(&point))
@@ -280,8 +278,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             // Render polygon widget
             // TODO: fix a weird issue where conrod tries to close the polygon path in an invalid \
             //   way, which produces weird graphics.
-            // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
-            //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
             conrod::widget::polygon::Polygon::abs_styled(
                 vert.into_iter()
                     .map(|vertex| position.abs_point(&vertex))
