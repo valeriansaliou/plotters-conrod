@@ -70,6 +70,14 @@ let drawing = ConrodBackend::new(
 
 If you are looking for a full example of an implementation, please check [cpu-monitor.rs](./examples/cpu-monitor.rs).
 
+# Are there any limitations?
+
+As Conrod is known to be quite inefficient at rendering images at any high-enough FPS (the likely cause is that it bypasses the GPU and does heavy CPU processing work), it was chosen to ignore the rendering of pixel primitives. The default Plotters rasterizer has been disabled in that case, as to avoid rendering performance to be degraded without the library user noticing.
+
+_It means that, some complex plot types may not render well._ Though, rest assured that common plot types have been tested to render exactly as expected, eg. the `LineSeries` or `Histogram`.
+
+There are plans to implement those pixel-based rendering methods in the future. If you already have an implementation, feel free to PR this library!
+
 ## How to run the examples?
 
 ### Example #1: `cpu-monitor`
