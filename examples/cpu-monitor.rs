@@ -266,7 +266,13 @@ fn main() {
                 .top_left()
                 .set(ids.conrod_wrapper, &mut ui);
 
-            render_conrod_plot(&mut ui, &mut data_points, &ids, font_regular, &mut conrod_graph);
+            render_conrod_plot(
+                &mut ui,
+                &mut data_points,
+                &ids,
+                font_regular,
+                &mut conrod_graph,
+            );
 
             conrod::widget::Text::new("Conrod test chart")
                 .with_style(title_text_style)
@@ -370,14 +376,14 @@ fn render_conrod_plot<'a, 'b>(
     data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     ids: &'b Ids,
     font: conrod_core::text::font::Id,
-    graph: &mut ConrodBackendReusableGraph
+    graph: &mut ConrodBackendReusableGraph,
 ) {
     let conrod_drawing = ConrodBackend::new(
         ui,
         (PLOT_WIDTH, PLOT_HEIGHT),
         ids.conrod_wrapper,
         font,
-        graph
+        graph,
     )
     .into_drawing_area();
 
@@ -426,9 +432,7 @@ fn plot<D: IntoDrawingArea>(
                 0,
                 &PLOT_LINE_COLOR.mix(0.175),
             )
-            .border_style(
-                ShapeStyle::from(&PLOT_LINE_COLOR).stroke_width(2)
-            ),
+            .border_style(ShapeStyle::from(&PLOT_LINE_COLOR).stroke_width(2)),
         )
         .expect("failed to draw chart data");
 }
