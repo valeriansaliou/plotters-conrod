@@ -39,7 +39,7 @@ pub struct ConrodBackend<'a, 'b> {
     indexes: ConrodBackendIndexes,
 }
 
-pub struct ConrodBackendPoints<'a> {
+struct ConrodBackendPoints<'a> {
     line: &'a conrod::widget::id::List,   // TODO: super heavy
     rect: &'a conrod::widget::id::List,   // TODO: super heavy
     path: &'a conrod::widget::id::List,   // TODO: super heavy
@@ -48,7 +48,7 @@ pub struct ConrodBackendPoints<'a> {
     fill: &'a conrod::widget::id::List,   // TODO: super heavy
 }
 
-pub struct ConrodBackendIndexes {
+struct ConrodBackendIndexes {
     line: usize,   // TODO: ugly
     rect: usize,   // TODO: ugly
     path: usize,   // TODO: ugly
@@ -409,7 +409,7 @@ impl Into<conrod::color::Color> for ConrodBackendColor {
 
 impl ConrodBackendColor {
     #[inline(always)]
-    pub fn gamma_srgb_to_linear(f: f32) -> f32 {
+    fn gamma_srgb_to_linear(f: f32) -> f32 {
         // See: https://en.wikipedia.org/wiki/SRGB
         // Code from: https://docs.rs/conrod_glium/0.71.0/src/conrod_glium/lib.rs.html#310-320
         if f <= 0.04045 {
