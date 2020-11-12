@@ -6,4 +6,4 @@
 
 mod conrod;
 
-pub use conrod::ConrodBackend;
+pub use conrod::{ConrodBackend, ConrodBackendIds};

@@ -22,39 +22,32 @@ struct ConrodBackendColor(conrod::color::Color);
 #[derive(Debug)]
 pub struct ConrodBackendError;
 
-impl std::fmt::Display for ConrodBackendError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(fmt, "{:?}", self)
-    }
-}
-
-impl std::error::Error for ConrodBackendError {}
-
 pub struct ConrodBackend<'a, 'b> {
     ui: &'a mut conrod::UiCell<'b>,
     size: (u32, u32),
     parent: conrod::widget::Id,
     font: conrod::text::font::Id,
-    points: ConrodBackendPoints<'b>,
-    indexes: ConrodBackendIndexes,
+    graph: ConrodBackendGraphNest<'b>,
 }
 
-struct ConrodBackendPoints<'a> {
-    line: &'a conrod::widget::id::List,   // TODO: super heavy
-    rect: &'a conrod::widget::id::List,   // TODO: super heavy
-    path: &'a conrod::widget::id::List,   // TODO: super heavy
-    circle: &'a conrod::widget::id::List, // TODO: super heavy
-    text: &'a conrod::widget::id::List,   // TODO: super heavy
-    fill: &'a conrod::widget::id::List,   // TODO: super heavy
+pub struct ConrodBackendIds<'a> {
+    pub line: &'a conrod::widget::id::List,
+    pub rect: &'a conrod::widget::id::List,
+    pub path: &'a conrod::widget::id::List,
+    pub circle: &'a conrod::widget::id::List,
+    pub text: &'a conrod::widget::id::List,
+    pub fill: &'a conrod::widget::id::List,
 }
 
-struct ConrodBackendIndexes {
-    line: usize,   // TODO: ugly
-    rect: usize,   // TODO: ugly
-    path: usize,   // TODO: ugly
-    circle: usize, // TODO: ugly
-    text: usize,   // TODO: ugly
-    fill: usize,   // TODO: ugly
+struct ConrodBackendGraph<'a>(&'a conrod::widget::id::List, usize);
+
+struct ConrodBackendGraphNest<'a> {
+    line: ConrodBackendGraph<'a>,
+    rect: ConrodBackendGraph<'a>,
+    path: ConrodBackendGraph<'a>,
+    circle: ConrodBackendGraph<'a>,
+    text: ConrodBackendGraph<'a>,
+    fill: ConrodBackendGraph<'a>,
 }
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
@@ -63,34 +56,16 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         size: (u32, u32),
         parent: conrod::widget::Id,
         font: conrod::text::font::Id,
-        points_line: &'b conrod::widget::id::List,
-        points_rect: &'b conrod::widget::id::List,
-        points_path: &'b conrod::widget::id::List,
-        points_circle: &'b conrod::widget::id::List,
-        points_text: &'b conrod::widget::id::List,
-        points_fill: &'b conrod::widget::id::List,
+        ids: ConrodBackendIds<'b>,
     ) -> Self {
+        // TODO: instantiate sub-widget ids from there? (check performance impact if they are local)
+
         Self {
             ui,
             parent,
             font,
             size,
-            points: ConrodBackendPoints {
-                line: points_line,
-                rect: points_rect,
-                path: points_path,
-                circle: points_circle,
-                text: points_text,
-                fill: points_fill,
-            },
-            indexes: ConrodBackendIndexes {
-                line: 0,
-                rect: 0,
-                path: 0,
-                circle: 0,
-                text: 0,
-                fill: 0,
-            },
+            graph: ConrodBackendGraphNest::from_ids(&ids),
         }
     }
 }
@@ -131,11 +106,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize calls to this in a method
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.line;
-        self.indexes.line += 1;
-
         // Acquire absolute position generator (in parent container)
         if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
             // Generate line style
@@ -150,7 +120,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.points.line[index], &mut self.ui);
+            .set(self.graph.line.next(), &mut self.ui);
         }
 
         Ok(())
@@ -163,12 +133,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize calls to this in a method
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.rect;
-        self.indexes.rect += 1;
-
-        let rectangle_style = if fill == true {
+        let rectangle_style = if fill {
             conrod::widget::primitive::shape::Style::fill_with(
                 ConrodBackendColor::from(&style.color()).into(),
             )
@@ -188,7 +153,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             rectangle_style,
         )
         .top_left_with_margins_on(self.parent, upper_left.1 as _, upper_left.0 as _)
-        .set(self.points.rect[index], &mut self.ui);
+        .set(self.graph.rect.next(), &mut self.ui);
 
         Ok(())
     }
@@ -198,11 +163,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         path: I,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize calls to this in a method
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.path;
-        self.indexes.path += 1;
-
         // Acquire absolute position generator (in parent container)
         if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
             // Generate line style
@@ -218,7 +178,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.points.path[index], &mut self.ui);
+            .set(self.graph.path.next(), &mut self.ui);
         }
 
         Ok(())
@@ -231,11 +191,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.circle;
-        self.indexes.circle += 1;
-
-        let circle_style = if fill == true {
+        let circle_style = if fill {
             conrod::widget::primitive::shape::Style::fill_with(
                 ConrodBackendColor::from(&style.color()).into(),
             )
@@ -253,7 +209,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 (center.1 - radius as i32) as f64,
                 (center.0 - radius as i32) as f64,
             )
-            .set(self.points.circle[index], &mut self.ui);
+            .set(self.graph.circle.next(), &mut self.ui);
 
         Ok(())
     }
@@ -263,11 +219,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         vert: I,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize calls to this in a method
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.fill;
-        self.indexes.fill += 1;
-
         // Acquire absolute position generator (in parent container)
         if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
             // Generate polygon style
@@ -285,7 +236,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 polygon_style,
             )
             .top_left_of(self.parent)
-            .set(self.points.fill[index], &mut self.ui);
+            .set(self.graph.fill.next(), &mut self.ui);
         }
 
         Ok(())
@@ -297,11 +248,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         pos: BackendCoord,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize calls to this in a method
-        // TODO: this is ugly, as we cannot reference by coords due to collisions
-        let index = self.indexes.text;
-        self.indexes.text += 1;
-
         let (text_width_estimated, font_size_final) = convert_font_style(text, style.size());
 
         let mut text_style = conrod::widget::primitive::text::Style::default();
@@ -323,7 +269,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as f64 - (style.size() / 2.0),
                 pos.0 as f64 - text_width_estimated,
             )
-            .set(self.points.text[index], &mut self.ui);
+            .set(self.graph.text.next(), &mut self.ui);
 
         Ok(())
     }
@@ -414,6 +360,44 @@ impl ConrodBackendColor {
         }
     }
 }
+
+impl<'a> ConrodBackendGraphNest<'a> {
+    fn from_ids(ids: &ConrodBackendIds<'a>) -> Self {
+        Self {
+            line: ConrodBackendGraph::from(ids.line),
+            rect: ConrodBackendGraph::from(ids.rect),
+            path: ConrodBackendGraph::from(ids.path),
+            circle: ConrodBackendGraph::from(ids.circle),
+            text: ConrodBackendGraph::from(ids.text),
+            fill: ConrodBackendGraph::from(ids.fill),
+        }
+    }
+}
+
+impl<'a> ConrodBackendGraph<'a> {
+    fn from(list: &'a conrod::widget::id::List) -> Self {
+        Self(list, 0)
+    }
+
+    fn next(&mut self) -> conrod::widget::Id {
+        // TODO: resize as needed
+
+        // Acquire current index, and mutate state index for next acquire
+        let index = self.1;
+
+        self.1 += 1;
+
+        self.0[index]
+    }
+}
+
+impl std::fmt::Display for ConrodBackendError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(fmt, "{:?}", self)
+    }
+}
+
+impl std::error::Error for ConrodBackendError {}
 
 #[inline(always)]
 fn convert_font_style(text: &str, size: f64) -> (f64, u32) {

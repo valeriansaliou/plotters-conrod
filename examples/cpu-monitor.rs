@@ -13,14 +13,12 @@ use std::path::Path;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use chrono;
 use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
-use conrod_glium;
 use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
 use plotters::style::TextStyle;
-use plotters_conrod::ConrodBackend;
+use plotters_conrod::{ConrodBackend, ConrodBackendIds};
 use psutil::*;
 
 const PLOT_WIDTH: u32 = 800;
@@ -396,12 +394,14 @@ fn render_conrod_plot<'a, 'b>(
         (PLOT_WIDTH, PLOT_HEIGHT),
         ids.conrod_wrapper,
         font,
-        &ids.conrod_plot_points_line,
-        &ids.conrod_plot_points_rect,
-        &ids.conrod_plot_points_path,
-        &ids.conrod_plot_points_circle,
-        &ids.conrod_plot_points_text,
-        &ids.conrod_plot_points_fill,
+        ConrodBackendIds {
+            line: &ids.conrod_plot_points_line,
+            rect: &ids.conrod_plot_points_rect,
+            path: &ids.conrod_plot_points_path,
+            circle: &ids.conrod_plot_points_circle,
+            text: &ids.conrod_plot_points_text,
+            fill: &ids.conrod_plot_points_fill,
+        }
     )
     .into_drawing_area();
 
