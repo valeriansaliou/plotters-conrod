@@ -105,23 +105,12 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _point: BackendCoord,
         _color: BackendColor,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("==> draw_pixel");
-
-        // TODO: disabled for now, as its heavy as we seemingly do not need it
-        // TODO: maybe make it configurable as to enable it as needed? Or use lighter drawing \
-        //   primitives, or else disable it in a static way
-
-        // TODO: fn for that
-        // pos = y(p.1) x width + x(p.0)
-        // let id_linear_idx = (point.1 * self.size.0 as i32 + point.0) as usize;
-        // let (pos_x, pos_y) = (point.0 as f64, point.1 as f64);
-
-        // // TODO: use a point primitive rather?
-        // // TODO: figure out this id thing, or create a custom widget? looks dirty here
-        // conrod::widget::rectangle::Rectangle::fill_with([1.0, 1.0], ConrodBackendColor::from(&color).into())
-        //     .top_left_with_margins_on(self.parent, pos_y, pos_x)
-        //     .set(self.points[id_linear_idx], &mut self.ui);
+        // Not supported yet (rendering ignored)
+        // Notice: doing this efficiently would require building an internal buffer on 'self', and \
+        //   rendering it as a Conrod image widget when the final call to 'present()' is done. \
+        //   doing it solely by drawing Conrod rectangle primitives from there has been deemed \
+        //   super inefficient. Note that this buffer would be shared with 'blit_bitmap()', and \
+        //   thus alpha-channel pixels would need to be blended accordingly.
 
         Ok(())
     }
@@ -337,6 +326,10 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _src: &[u8],
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // Not supported yet (rendering ignored)
+        // Notice: doing this efficiently would require building an internal buffer on 'self', and \
+        //   rendering it as a Conrod image widget when the final call to 'present()' is done. \
+        //   Note that this buffer would be shared with 'draw_pixel()', and thus alpha-channel \
+        //   pixels would need to be blended accordingly.
 
         Ok(())
     }
