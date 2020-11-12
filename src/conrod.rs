@@ -36,6 +36,7 @@ pub struct ConrodBackend<'a, 'b> {
 
 pub struct ConrodBackendPoints<'a> {
     line: &'a conrod::widget::id::List,   // TODO: super heavy
+    rect: &'a conrod::widget::id::List,   // TODO: super heavy
     path: &'a conrod::widget::id::List,   // TODO: super heavy
     circle: &'a conrod::widget::id::List, // TODO: super heavy
     text: &'a conrod::widget::id::List,   // TODO: super heavy
@@ -43,6 +44,7 @@ pub struct ConrodBackendPoints<'a> {
 
 pub struct ConrodBackendIndexes {
     line: usize,   // TODO: ugly
+    rect: usize,   // TODO: ugly
     path: usize,   // TODO: ugly
     circle: usize, // TODO: ugly
     text: usize,   // TODO: ugly
@@ -55,6 +57,7 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         parent: conrod::widget::Id,
         font: conrod::text::font::Id,
         points_line: &'b conrod::widget::id::List,
+        points_rect: &'b conrod::widget::id::List,
         points_path: &'b conrod::widget::id::List,
         points_circle: &'b conrod::widget::id::List,
         points_text: &'b conrod::widget::id::List,
@@ -66,12 +69,14 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
             size,
             points: ConrodBackendPoints {
                 line: points_line,
+                rect: points_rect,
                 path: points_path,
                 circle: points_circle,
                 text: points_text,
             },
             indexes: ConrodBackendIndexes {
                 line: 0,
+                rect: 0,
                 path: 0,
                 circle: 0,
                 text: 0,
@@ -158,58 +163,37 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
     fn draw_rect<S: BackendStyle>(
         &mut self,
-        _upper_left: BackendCoord,
-        _bottom_right: BackendCoord,
-        _style: &S,
-        _fill: bool,
+        upper_left: BackendCoord,
+        bottom_right: BackendCoord,
+        style: &S,
+        fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("==> draw_rect");
+        // TODO: commonize calls to this in a method
+        // TODO: this is ugly, as we cannot reference by coords due to collisions
+        let index = self.indexes.rect;
+        self.indexes.rect += 1;
 
-        // TODO
-        // if fill {
-        //     rectangle(
-        //         make_piston_rgba(&style.color()),
-        //         make_point_pair(
-        //             upper_left,
-        //             (bottom_right.0 - upper_left.0, bottom_right.1 - upper_left.1),
-        //             self.scale,
-        //         ),
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        // } else {
-        //     let color = make_piston_rgba(&style.color());
-        //     let [x0, y0, x1, y1] = make_point_pair(upper_left, bottom_right, self.scale);
-        //     line(
-        //         color,
-        //         self.scale,
-        //         [x0, y0, x0, y1],
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        //     line(
-        //         color,
-        //         self.scale,
-        //         [x0, y1, x1, y1],
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        //     line(
-        //         color,
-        //         self.scale,
-        //         [x1, y1, x1, y0],
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        //     line(
-        //         color,
-        //         self.scale,
-        //         [x1, y0, x0, y0],
-        //         self.context.transform,
-        //         self.graphics,
-        //     );
-        // }
+        let rectangle_style = if fill == true {
+            conrod::widget::primitive::shape::Style::fill_with(
+                ConrodBackendColor::from(&style.color()).into(),
+            )
+        } else {
+            conrod::widget::primitive::shape::Style::outline_styled(
+                conrod::widget::primitive::line::Style::new()
+                    .color(ConrodBackendColor::from(&style.color()).into())
+                    .thickness(style.stroke_width() as _),
+            )
+        };
+
+        conrod::widget::rectangle::Rectangle::styled(
+            [
+                (bottom_right.0 - upper_left.0) as _,
+                (bottom_right.1 - upper_left.1) as _,
+            ],
+            rectangle_style,
+        )
+        .top_left_with_margins_on(self.parent, upper_left.1 as _, upper_left.0 as _)
+        .set(self.points.rect[index], &mut self.ui);
 
         Ok(())
     }
