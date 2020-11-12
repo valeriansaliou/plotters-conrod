@@ -1,6 +1,6 @@
 [package]
 name = "plotters-conrod"
-version = "0.0.0"
+version = "0.3.0"
 description = "Conrod backend for Plotters"
 readme = "README.md"
 license = "MIT"
