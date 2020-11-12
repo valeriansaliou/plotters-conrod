@@ -5,3 +5,15 @@ rust:
   - nightly
 
 cache: cargo
+
+jobs:
+  allow_failures:
+    - rust: nightly
+
+  before_install:
+    - cargo install rustfmt
+    - cargo install clippy
+
+  script:
+    - cargo fmt --all -- --check
+    - cargo clippy --all-targets --all-features -- -D warnings
