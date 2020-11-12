@@ -55,6 +55,7 @@ use plotters_conrod::ConrodBackend;
 Then, for each frame you draw, call:
 
 ```rust
+// Notes:
 // 'ids.parent' is the WidgetId of the canvas that contains your plot;
 // 'ids.points' is a List of WidgetId, pre-allocated to a large-enough number \
 //   of WidgetId so that all Conrod primitives can be inserted as to draw the \
