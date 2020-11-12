@@ -50,6 +50,12 @@ pub struct ConrodBackendReusableGraph {
 struct ConrodBackendReusableGraphAtom(conrod::widget::id::List, usize);
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
+    /// Create a new Conrod backend drawer
+    /// - `ui`: the `UiCell` that was derived from `Ui` for this frame
+    /// - `(plot_width, plot_height)`: the size of your plot in pixels (make sure it matches its parent canvas size)
+    /// - `ids.parent`: the `widget::Id` of the canvas that contains your plot (of the same size than the plot itself)
+    /// - `fonts.regular`: the `font::Id` of the font to use to draw text (ie. a Conrod font identifier)
+    /// - `conrod_graph`: a mutable reference to the graph instance you built outside of the drawing loop (pass it as a mutable reference)
     pub fn new(
         ui: &'a mut conrod::UiCell<'b>,
         size: (u32, u32),

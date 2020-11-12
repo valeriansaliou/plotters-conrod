@@ -66,7 +66,7 @@ Finally, for each frame you draw (ie. your main loop), call:
 // Where:
 //  - 'ui' is the UiCell that was derived from Ui for this frame;
 //  - '(plot_width, plot_height)' is the size of your plot in pixels (make sure it matches its parent canvas size);
-//  - 'ids.parent' is the WidgetId of the canvas that contains your plot (of the same size than the plot itself);
+//  - 'ids.parent' is the widget::Id of the canvas that contains your plot (of the same size than the plot itself);
 //  - 'fonts.regular' is the font::Id of the font to use to draw text (ie. a Conrod font identifier);
 //  - 'conrod_graph' is a mutable reference to the graph instance you built outside of the drawing loop (pass it as a mutable reference);
 let drawing = ConrodBackend::new(
