@@ -1,5 +1,7 @@
 # plotters-conrod
 
+[![Build Status](https://travis-ci.org/valeriansaliou/plotters-conrod.svg?branch=master)](https://travis-ci.org/valeriansaliou/plotters-conrod) [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://www.buymeacoffee.com/valeriansaliou)
+
 This is an implementation of a Conrod backend for Plotters. This is more efficient than using the default Bitmap backend when plotting in Conrod, as it has been observed that Conrod was quite inefficient at re-rendering images at high FPS (eg. for real-time plotting).
 
 This backend has been optimized as for speed, and as to render plots that look very similar to the default Bitmap backend, if not indistinguishable.
