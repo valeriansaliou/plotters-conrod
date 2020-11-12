@@ -67,7 +67,9 @@ let drawing = ConrodBackend::new(
     &ids.points,
 ).into_drawing_area();
 
-// Build your chart as usual here
+// ---
+// Build your chart as usual here, using the regular Plotters syntax
+// ---
 ```
 
 If you are looking for a full example of an implementation, please check [cpu-monitor.rs](./examples/cpu-monitor.rs).
