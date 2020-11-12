@@ -292,7 +292,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _vert: I,
         _style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // Not supported (rendering ignored)
+        // Not supported yet (rendering ignored)
 
         Ok(())
     }
@@ -352,7 +352,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         (_iw, _ih): (u32, u32),
         _src: &[u8],
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // Not supported (rendering ignored)
+        // Not supported yet (rendering ignored)
 
         Ok(())
     }
