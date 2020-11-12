@@ -16,7 +16,7 @@ plotters-backend = "0.3"
 conrod_core = "^0.70"
 
 [dev-dependencies]
-plotters = { version = "0.3", default_features = false, features = ["chrono", "bitmap_backend", "line_series", "ttf"] }
+plotters = { version = "0.3", default_features = false, features = ["chrono", "bitmap_backend", "area_series", "ttf"] }
 conrod_glium = "0.70"
 conrod_winit = "0.70"
 winit = "0.19"

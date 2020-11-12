@@ -161,6 +161,7 @@ widget_ids!(struct Ids {
     conrod_plot_points_path[],
     conrod_plot_points_circle[],
     conrod_plot_points_text[],
+    conrod_plot_points_fill[],
 });
 
 fn main() {
@@ -194,6 +195,8 @@ fn main() {
     ids.conrod_plot_points_circle
         .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
     ids.conrod_plot_points_text
+        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
+    ids.conrod_plot_points_fill
         .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
 
     let mut image_map = conrod::image::Map::<glium::texture::SrgbTexture2d>::new();
@@ -397,6 +400,7 @@ fn render_conrod_plot<'a, 'b>(
         &ids.conrod_plot_points_path,
         &ids.conrod_plot_points_circle,
         &ids.conrod_plot_points_text,
+        &ids.conrod_plot_points_fill,
     )
     .into_drawing_area();
 
@@ -440,13 +444,14 @@ fn plot<D: IntoDrawingArea>(
 
     chart
         .draw_series(
-            LineSeries::new(
+            AreaSeries::new(
                 data_points.iter().map(|x| (x.0, x.1 as i32)),
-                ShapeStyle::from(&plotters::style::RGBColor(0, 196, 255))
-                    .filled()
-                    .stroke_width(2),
+                0,
+                &plotters::style::RGBColor(0, 196, 255).mix(0.2),
             )
-            .point_size(0),
+            .border_style(
+                ShapeStyle::from(&plotters::style::RGBColor(0, 196, 255)).stroke_width(2)
+            ),
         )
         .expect("failed to draw chart data");
 }
