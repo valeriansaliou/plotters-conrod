@@ -46,7 +46,7 @@ const FRAME_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / FRAME_TICK
 const FRAME_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
 
 // This can be used to disable the reference Bitmap chart
-const REFERENCE_BITMAP_ENABLED: bool = false;
+const REFERENCE_BITMAP_ENABLED: bool = true;
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 pub struct EventLoop;
