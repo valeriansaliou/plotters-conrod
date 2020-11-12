@@ -12,6 +12,8 @@ use plotters_backend::{
     DrawingErrorKind,
 };
 
+const BACKEND_GRAPH_RESIZE_CHUNK: usize = 20;
+
 struct ConrodBackendPosition {
     x_start: i32,
     y_end: i32,
@@ -120,7 +122,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.line.next(), &mut self.ui);
+            .set(self.graph.line.next(&self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -153,7 +155,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             rectangle_style,
         )
         .top_left_with_margins_on(self.parent, upper_left.1 as _, upper_left.0 as _)
-        .set(self.graph.rect.next(), &mut self.ui);
+        .set(self.graph.rect.next(&self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -178,7 +180,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.path.next(), &mut self.ui);
+            .set(self.graph.path.next(&self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -209,7 +211,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 (center.1 - radius as i32) as f64,
                 (center.0 - radius as i32) as f64,
             )
-            .set(self.graph.circle.next(), &mut self.ui);
+            .set(self.graph.circle.next(&self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -236,7 +238,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 polygon_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.fill.next(), &mut self.ui);
+            .set(self.graph.fill.next(&self.ui), &mut self.ui);
         }
 
         Ok(())
@@ -269,7 +271,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as f64 - (style.size() / 2.0),
                 pos.0 as f64 - text_width_estimated,
             )
-            .set(self.graph.text.next(), &mut self.ui);
+            .set(self.graph.text.next(&self.ui), &mut self.ui);
 
         Ok(())
     }
@@ -379,15 +381,28 @@ impl<'a> ConrodBackendGraph<'a> {
         Self(list, 0)
     }
 
-    fn next(&mut self) -> conrod::widget::Id {
-        // TODO: resize as needed
+    fn next(&mut self, ui: &conrod::UiCell) -> conrod::widget::Id {
+        // Acquire current index (ie. last 'next index')
+        let current_index = self.1;
 
-        // Acquire current index, and mutate state index for next acquire
-        let index = self.1;
-
+        // Mutate state for next index
         self.1 += 1;
 
-        self.0[index]
+        // IDs list has not a large-enough capacity for all dynamically-allocated IDs? Enlarge it \
+        //   by a pre-defined chunk size (this prevents enlarging the list one by one, requiring \
+        //   frequent re-allocations)
+        // Notice: this upsizes the graph list to allow next ID to be stored, but may be used to \
+        //   store current ID as well if the list starts from a length of zero and this is the \
+        //   first call to 'next()'.
+        // TODO: enable this please
+        // if self.1 >= self.0.len() {
+        //     self.0.resize(
+        //         self.0.len() + BACKEND_GRAPH_RESIZE_CHUNK,
+        //         &mut ui.widget_id_generator(),
+        //     );
+        // }
+
+        self.0[current_index]
     }
 }
 
