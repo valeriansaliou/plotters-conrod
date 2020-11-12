@@ -223,8 +223,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             );
 
             // Render polygon widget
-            // TODO: fix a weird issue where conrod tries to close the polygon path in an invalid \
-            //   way, which produces weird graphics.
             conrod::widget::polygon::Polygon::abs_styled(
                 vert.into_iter()
                     .map(|vertex| position.abs_point(&vertex))
@@ -358,7 +356,7 @@ impl ConrodBackendColor {
 }
 
 impl ConrodBackendReusableGraph {
-    pub fn new() -> Self {
+    pub fn build() -> Self {
         Self {
             line: ConrodBackendReusableGraphAtom::new(),
             rect: ConrodBackendReusableGraphAtom::new(),

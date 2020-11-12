@@ -204,7 +204,7 @@ fn main() {
     );
 
     // Bootstrap Conrod backend IDs graph
-    let mut conrod_graph = ConrodBackendReusableGraph::new();
+    let mut conrod_graph = ConrodBackendReusableGraph::build();
 
     // Initialize common canvas style
     let mut canvas_style = conrod::widget::canvas::Style::default();
