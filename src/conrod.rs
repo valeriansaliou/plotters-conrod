@@ -292,10 +292,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _vert: I,
         _style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("==> fill_polygon");
-
-        // TODO: implement this?
+        // Not supported (rendering ignored)
 
         Ok(())
     }
@@ -311,12 +308,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         let index = self.indexes.text;
         self.indexes.text += 1;
 
-        // TODO: this is also ugly, should not have to do that
-        let text_width_estimated = (text.len() as f64 * style.size()) * 0.6;
-
-        // Font size needs to be adjusted using a 90% factor, as to appear the same size than \
-        //   when redered using the reference Bitmap backend.
-        let font_size_final = (style.size() * 0.9) as u32;
+        let (text_width_estimated, font_size_final) = convert_font_style(text, style.size());
 
         let mut text_style = conrod::widget::primitive::text::Style::default();
 
@@ -345,15 +337,13 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
     fn estimate_text_size<S: BackendTextStyle>(
         &self,
-        _text: &str,
-        _style: &S,
+        text: &str,
+        style: &S,
     ) -> Result<(u32, u32), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: remove this debug
-        dbg!("==> estimate_text_size");
+        let (text_width_estimated, text_height_estimated) = convert_font_style(text, style.size());
 
-        // TODO: implement this, avoid using the built-in (heavy) font rasterizer
-
-        Ok((0, 0))
+        // Return as (size_on_x, size_on_y)
+        Ok((text_width_estimated as u32, text_height_estimated))
     }
 
     fn blit_bitmap(
@@ -390,4 +380,15 @@ impl Into<conrod::color::Color> for ConrodBackendColor {
     fn into(self) -> conrod::color::Color {
         self.0
     }
+}
+
+fn convert_font_style(text: &str, size: f64) -> (f64, u32) {
+    // Font size needs to be adjusted using a 90% factor, as to appear the same size than \
+    //   when redered using the reference Bitmap backend.
+    let font_size_final = (size * 0.9) as u32;
+
+    // TODO: this is also ugly, should not have to do that
+    let text_width_estimated = (text.len() as f64 * size) * 0.6;
+
+    (text_width_estimated, font_size_final)
 }
