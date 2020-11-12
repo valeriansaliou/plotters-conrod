@@ -84,7 +84,7 @@ _The first plot uses `plotters-conrod`, while the second plot uses the default B
 
 ## Are there any limitations?
 
-### Limitation #1: no pixel-by-pixel rendering
+### Limitation #1: No pixel-by-pixel rendering
 
 As Conrod is known to be quite inefficient at rendering image widgets at any high-enough FPS (the likely cause is that it bypasses the GPU and does heavy CPU processing work), it was chosen to ignore the rendering of pixel primitives.
 
@@ -94,6 +94,6 @@ _It means that, some complex plot types may not render well._ Though, rest assur
 
 There are plans to implement those pixel-based rendering methods in the future. If you already have an implementation, feel free to PR this library!
 
-### Limitation #2: limited text rendering
+### Limitation #2: Limited text rendering
 
 Only a single font family (ie. `serif`, `sans-serif`, etc.) and a single font style (ie. `regular`, `bold`, etc.) are supported for text rendering. The reason is that Conrod makes it quite tedious to load fonts and pass them over, so we better off limit the backend API to a single font for simplicity's sake. As well, font transforms are not supported due to the underlying Conrod renderer, which does not seem to support text rotations.
