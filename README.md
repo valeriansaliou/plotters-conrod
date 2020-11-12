@@ -84,7 +84,7 @@ _The first plot uses `plotters-conrod`, while the second plot uses the default B
 
 ## Are there any limitations?
 
-As Conrod is known to be quite inefficient at rendering images at any high-enough FPS (the likely cause is that it bypasses the GPU and does heavy CPU processing work), it was chosen to ignore the rendering of pixel primitives. The default Plotters rasterizer has been disabled in that case, as to avoid rendering performance to be degraded without the library user noticing. This guarantees that the GPU is used for rendering, while the CPU does minimal work.
+As Conrod is known to be quite inefficient at rendering image widgets at any high-enough FPS (the likely cause is that it bypasses the GPU and does heavy CPU processing work), it was chosen to ignore the rendering of pixel primitives. The default Plotters rasterizer has been disabled in that case, as to avoid rendering performance to be degraded without the library user noticing. This guarantees that the GPU is used for rendering, while the CPU does minimal work.
 
 _It means that, some complex plot types may not render well._ Though, rest assured that common plot types have been tested to render exactly as expected, eg. the `LineSeries` or `Histogram`.
 
