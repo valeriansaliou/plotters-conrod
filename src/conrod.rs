@@ -377,6 +377,7 @@ impl From<&BackendColor> for ConrodBackendColor {
         // Notice: correct alpha channel value, looks like there is a SQRT ratio between Plotters \
         //   and Conrod color objects, where Plotters color objects seem to output the correct \
         //   color alpha blend once rendered on screen.
+        // Warning: 'Rgba' is actually 'Srgba', this naming in Conrod is misleading.
         Self(conrod::color::Color::Rgba(
             r as f32 / 255.0,
             g as f32 / 255.0,
