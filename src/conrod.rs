@@ -63,6 +63,11 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         font: conrod::text::font::Id,
         graph: &'a mut ConrodBackendReusableGraph,
     ) -> Self {
+        // Important: prepare the IDs graph, and reset all incremented IDs counters back to zero; \
+        //   if we do not do that, counts will increment forever and the graph will be enlarged \
+        //   infinitely, which would result in a huge memory leak.
+        graph.prepare();
+
         Self {
             ui,
             parent,
@@ -81,11 +86,6 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     }
 
     fn ensure_prepared(&mut self) -> Result<(), DrawingErrorKind<ConrodBackendError>> {
-        // Important: prepare the IDs graph, and reset all incremented IDs counters back to zero; \
-        //   if we do not do that, counts will increment forever and the graph will be enlarged \
-        //   infinitely, which would result in a huge memory leak.
-        self.graph.prepare();
-
         Ok(())
     }
 
@@ -145,6 +145,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // Generate rectangle style
         let rectangle_style = if fill {
             conrod::widget::primitive::shape::Style::fill_with(
                 ConrodBackendColor::from(&style.color()).into(),
@@ -157,6 +158,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             )
         };
 
+        // Render rectangle widget
         conrod::widget::rectangle::Rectangle::styled(
             [
                 (bottom_right.0 - upper_left.0) as _,
@@ -207,6 +209,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // Generate circle style
         let circle_style = if fill {
             conrod::widget::primitive::shape::Style::fill_with(
                 ConrodBackendColor::from(&style.color()).into(),
@@ -219,6 +222,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             )
         };
 
+        // Render circle widget
         conrod::widget::circle::Circle::styled(radius as f64, circle_style)
             .top_left_with_margins_on(
                 self.parent,
@@ -266,8 +270,10 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
         pos: BackendCoord,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // Adapt font style from rasterizer style to Conrod
         let (text_width_estimated, font_size_final) = convert_font_style(text, style.size());
 
+        // Generate text style
         let mut text_style = conrod::widget::primitive::text::Style::default();
 
         text_style.color = Some(ConrodBackendColor::from(&style.color()).into());
@@ -280,11 +286,12 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             text_anchor::HPos::Center => conrod::text::Justify::Center,
         });
 
+        // Render text widget
         conrod::widget::Text::new(text)
             .with_style(text_style)
             .top_left_with_margins_on(
                 self.parent,
-                pos.1 as f64 - (style.size() / 2.0),
+                pos.1 as f64 - (style.size() / 2.0 + 1.0),
                 pos.0 as f64 - text_width_estimated,
             )
             .set(self.graph.text.next(&mut self.ui), &mut self.ui);
