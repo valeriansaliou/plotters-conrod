@@ -28,6 +28,7 @@ const PLOT_HEIGHT: u32 = 480;
 const PLOT_PIXELS: usize = (PLOT_WIDTH * PLOT_HEIGHT) as usize;
 const PLOT_SECONDS: usize = 10;
 const PLOT_IDS_MAXIMUM: usize = 1000;
+const PLOT_LINE_COLOR: RGBColor = plotters::style::RGBColor(0, 196, 255);
 
 const WINDOW_WIDTH: u32 = PLOT_WIDTH;
 
@@ -447,10 +448,10 @@ fn plot<D: IntoDrawingArea>(
             AreaSeries::new(
                 data_points.iter().map(|x| (x.0, x.1 as i32)),
                 0,
-                &plotters::style::RGBColor(0, 196, 255).mix(0.2),
+                &PLOT_LINE_COLOR.mix(0.2),
             )
             .border_style(
-                ShapeStyle::from(&plotters::style::RGBColor(0, 196, 255)).stroke_width(2)
+                ShapeStyle::from(&PLOT_LINE_COLOR).stroke_width(2)
             ),
         )
         .expect("failed to draw chart data");
