@@ -50,7 +50,7 @@ pub struct ConrodBackendReusableGraph {
 struct ConrodBackendReusableGraphAtom(conrod::widget::id::List, usize);
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
-    /// Create a new Conrod backend drawer
+    /// Create a new Conrod backend drawer, with:
     /// - `ui`: the `UiCell` that was derived from `Ui` for this frame
     /// - `(plot_width, plot_height)`: the size of your plot in pixels (make sure it matches its parent canvas size)
     /// - `ids.parent`: the `widget::Id` of the canvas that contains your plot (of the same size than the plot itself)
@@ -380,6 +380,9 @@ impl ConrodBackendColor {
 }
 
 impl ConrodBackendReusableGraph {
+    /// Build a new Conrod backend re-usable graph of widget identifiers
+    ///
+    /// **This should be put outside of your drawer loop and built once; failing to do so will result in heavy CPU usage due to the graph being rebuilt for every frame!**
     pub fn build() -> Self {
         Self {
             line: ConrodBackendReusableGraphAtom::new(),
