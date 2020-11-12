@@ -17,7 +17,6 @@ use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
 use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
-use plotters::style::TextStyle;
 use plotters_conrod::{ConrodBackend, ConrodBackendReusableGraph};
 use psutil::*;
 
@@ -75,7 +74,7 @@ impl WinitWindow for GliumDisplayWinitWrapper {
 }
 
 impl EventLoop {
-    pub fn new() -> Self {
+    pub fn start() -> Self {
         EventLoop {}
     }
 
@@ -94,9 +93,9 @@ impl EventLoop {
 }
 
 impl EventsHandler {
-    pub fn new() -> EventsHandler {
+    pub fn run() -> EventsHandler {
         EventsHandler {
-            event_loop: EventLoop::new(),
+            event_loop: EventLoop::start(),
         }
     }
 
@@ -220,8 +219,8 @@ fn main() {
     title_text_style.color = Some(conrod::color::WHITE);
     title_text_style.font_size = Some(TITLE_FONT_SIZE);
 
-    // Start evens handler
-    let mut events_handler = EventsHandler::new();
+    // Run events handler
+    let mut events_handler = EventsHandler::run();
 
     // Start drawing loop
     'main: loop {
@@ -416,11 +415,11 @@ fn plot<D: IntoDrawingArea>(
         .bold_line_style(&plotters::style::colors::WHITE.mix(0.1))
         .light_line_style(&plotters::style::colors::WHITE.mix(0.05))
         .y_labels(10)
-        .y_label_style(TextStyle::from(
+        .y_label_style(
             ("sans-serif", 15)
                 .into_font()
                 .color(&plotters::style::colors::WHITE.mix(0.65)),
-        ))
+        )
         .y_label_formatter(&|y| format!("{}%", y))
         .draw()
         .expect("failed to draw chart mesh");
