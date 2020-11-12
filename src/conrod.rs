@@ -12,6 +12,11 @@ use plotters_backend::{
     DrawingErrorKind,
 };
 
+struct ConrodBackendPosition {
+    x_start: i32,
+    y_end: i32,
+}
+
 struct ConrodBackendColor(conrod::color::Color);
 
 #[derive(Debug)]
@@ -126,26 +131,22 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize w/ draw_path? + inline fn
-        let line_style = conrod::widget::primitive::line::Style::solid()
-            .color(ConrodBackendColor::from(&style.color()).into())
-            .thickness(style.stroke_width() as _);
-
         // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
         let index = self.indexes.line;
         self.indexes.line += 1;
 
-        // Acquire parent bounding box in absolute coordinates (required for line points \
-        //   positioning)
-        if let Some(parent_rect) = self.ui.rect_of(self.parent) {
-            let (box_x_start, box_y_end) = (parent_rect.x.start as i32, parent_rect.y.end as i32);
+        // Acquire absolute position generator (in parent container)
+        if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
+            // Generate line style
+            let line_style = conrod::widget::primitive::line::Style::solid()
+                .color(ConrodBackendColor::from(&style.color()).into())
+                .thickness(style.stroke_width() as _);
 
-            // TODO: remove the absolute positioning thing? (find a way to do clean relative \
-            //   positioning straight out of the box)
+            // Render line widget
             conrod::widget::line::Line::abs_styled(
-                [(from.0 + box_x_start) as _, (-from.1 + box_y_end) as _],
-                [(to.0 + box_x_start) as _, (-to.1 + box_y_end) as _],
+                position.abs_point(&from),
+                position.abs_point(&to),
                 line_style,
             )
             .top_left_of(self.parent)
@@ -192,35 +193,29 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         Ok(())
     }
 
-    // TODO: implement this, this replaces draw_line and is more efficient!
     fn draw_path<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
         &mut self,
         path: I,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // TODO: commonize w/ draw_line? + inline fn
-        let line_style = conrod::widget::primitive::line::Style::solid()
-            .color(ConrodBackendColor::from(&style.color()).into())
-            .thickness(style.stroke_width() as _);
-
         // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
         let index = self.indexes.path;
         self.indexes.path += 1;
 
-        // Acquire parent bounding box in absolute coordinates (required for line points \
-        //   positioning)
-        // TODO: commonize this w/ the draw_line fn + always inline?
-        if let Some(parent_rect) = self.ui.rect_of(self.parent) {
-            let (box_x_start, box_y_end) = (parent_rect.x.start as i32, parent_rect.y.end as i32);
+        // Acquire absolute position generator (in parent container)
+        if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
+            // Generate line style
+            let line_style = conrod::widget::primitive::line::Style::solid()
+                .color(ConrodBackendColor::from(&style.color()).into())
+                .thickness(style.stroke_width() as _);
 
-            // TODO: remove the absolute positioning thing? (find a way to do clean relative \
-            //   positioning straight out of the box)
+            // Render point path widget
             // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
             //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
             conrod::widget::point_path::PointPath::abs_styled(
                 path.into_iter()
-                    .map(|point| [(point.0 + box_x_start) as _, (-point.1 + box_y_end) as _])
+                    .map(|point| position.abs_point(&point))
                     .collect::<Vec<conrod::position::Point>>(),
                 line_style,
             )
@@ -270,30 +265,26 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         vert: I,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        let polygon_style = conrod::widget::primitive::shape::Style::fill_with(
-            ConrodBackendColor::from(&style.color()).into(),
-        );
-
         // TODO: commonize calls to this in a method
         // TODO: this is ugly, as we cannot reference by coords due to collisions
         let index = self.indexes.fill;
         self.indexes.fill += 1;
 
-        // Acquire parent bounding box in absolute coordinates (required for polygon points \
-        //   positioning)
-        // TODO: commonize this w/ the draw_line fn + always inline?
-        if let Some(parent_rect) = self.ui.rect_of(self.parent) {
-            let (box_x_start, box_y_end) = (parent_rect.x.start as i32, parent_rect.y.end as i32);
+        // Acquire absolute position generator (in parent container)
+        if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
+            // Generate polygon style
+            let polygon_style = conrod::widget::primitive::shape::Style::fill_with(
+                ConrodBackendColor::from(&style.color()).into(),
+            );
 
+            // Render polygon widget
             // TODO: fix a weird issue where conrod tries to close the polygon path in an invalid \
             //   way, which produces weird graphics.
-            // TODO: remove the absolute positioning thing? (find a way to do clean relative \
-            //   positioning straight out of the box)
             // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
             //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
             conrod::widget::polygon::Polygon::abs_styled(
                 vert.into_iter()
-                    .map(|vertex| [(vertex.0 + box_x_start) as _, (-vertex.1 + box_y_end) as _])
+                    .map(|vertex| position.abs_point(&vertex))
                     .collect::<Vec<conrod::position::Point>>(),
                 polygon_style,
             )
@@ -366,6 +357,25 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         //   pixels would need to be blended accordingly.
 
         Ok(())
+    }
+}
+
+impl ConrodBackendPosition {
+    fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
+        if let Some(parent_rect) = ui.rect_of(parent) {
+            Some(Self {
+                x_start: parent_rect.x.start as _,
+                y_end: parent_rect.y.end as _,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn abs_point(&self, point: &BackendCoord) -> [f64; 2] {
+        // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
+        //   the full rendering space.
+        [(point.0 + self.x_start) as _, (-point.1 + self.y_end) as _]
     }
 }
 
