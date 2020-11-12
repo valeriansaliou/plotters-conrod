@@ -36,12 +36,14 @@ pub struct ConrodBackend<'a, 'b> {
 
 pub struct ConrodBackendPoints<'a> {
     line: &'a conrod::widget::id::List,   // TODO: super heavy
+    path: &'a conrod::widget::id::List,   // TODO: super heavy
     circle: &'a conrod::widget::id::List, // TODO: super heavy
     text: &'a conrod::widget::id::List,   // TODO: super heavy
 }
 
 pub struct ConrodBackendIndexes {
     line: usize,   // TODO: ugly
+    path: usize,   // TODO: ugly
     circle: usize, // TODO: ugly
     text: usize,   // TODO: ugly
 }
@@ -53,6 +55,7 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         parent: conrod::widget::Id,
         font: conrod::text::font::Id,
         points_line: &'b conrod::widget::id::List,
+        points_path: &'b conrod::widget::id::List,
         points_circle: &'b conrod::widget::id::List,
         points_text: &'b conrod::widget::id::List,
     ) -> Self {
@@ -63,11 +66,13 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
             size,
             points: ConrodBackendPoints {
                 line: points_line,
+                path: points_path,
                 circle: points_circle,
                 text: points_text,
             },
             indexes: ConrodBackendIndexes {
                 line: 0,
+                path: 0,
                 circle: 0,
                 text: 0,
             },
@@ -95,6 +100,9 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _point: BackendCoord,
         _color: BackendColor,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        dbg!("==> draw_pixel");
+
         // TODO: disabled for now, as its heavy as we seemingly do not need it
         // TODO: maybe make it configurable as to enable it as needed? Or use lighter drawing \
         //   primitives, or else disable it in a static way
@@ -119,6 +127,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         to: BackendCoord,
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: commonize w/ draw_path? + inline fn
         let line_style = conrod::widget::primitive::line::Style::solid()
             .color(ConrodBackendColor::from(&style.color()).into())
             .thickness(style.stroke_width() as _);
@@ -154,6 +163,9 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _style: &S,
         _fill: bool,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        dbg!("==> draw_rect");
+
         // TODO
         // if fill {
         //     rectangle(
@@ -203,15 +215,43 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     }
 
     // TODO: implement this, this replaces draw_line and is more efficient!
-    // fn draw_path<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
-    //     &mut self,
-    //     _path: I,
-    //     _style: &S,
-    // ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-    //     // TODO
+    fn draw_path<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
+        &mut self,
+        path: I,
+        style: &S,
+    ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: commonize w/ draw_line? + inline fn
+        let line_style = conrod::widget::primitive::line::Style::solid()
+            .color(ConrodBackendColor::from(&style.color()).into())
+            .thickness(style.stroke_width() as _);
 
-    //     Ok(())
-    // }
+        // TODO: commonize calls to this in a method
+        // TODO: this is ugly, as we cannot reference by coords due to collisions
+        let index = self.indexes.path;
+        self.indexes.path += 1;
+
+        // Acquire parent bounding box in absolute coordinates (required for line points \
+        //   positioning)
+        // TODO: commonize this w/ the draw_line fn + always inline?
+        if let Some(parent_rect) = self.ui.rect_of(self.parent) {
+            let (box_x_start, box_y_end) = (parent_rect.x.start as i32, parent_rect.y.end as i32);
+
+            // TODO: remove the absolute positioning thing? (find a way to do clean relative \
+            //   positioning straight out of the box)
+            // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
+            //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
+            conrod::widget::point_path::PointPath::abs_styled(
+                path.into_iter()
+                    .map(|point| [(point.0 + box_x_start) as _, (-point.1 + box_y_end) as _])
+                    .collect::<Vec<conrod::position::Point>>(),
+                line_style,
+            )
+            .top_left_of(self.parent)
+            .set(self.points.path[index], &mut self.ui);
+        }
+
+        Ok(())
+    }
 
     fn draw_circle<S: BackendStyle>(
         &mut self,
@@ -247,16 +287,18 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         Ok(())
     }
 
-    // TODO: implement this?
-    // fn fill_polygon<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
-    //     &mut self,
-    //     _vert: I,
-    //     _style: &S,
-    // ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-    //     // TODO
+    fn fill_polygon<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
+        &mut self,
+        _vert: I,
+        _style: &S,
+    ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        dbg!("==> fill_polygon");
 
-    //     Ok(())
-    // }
+        // TODO: implement this?
+
+        Ok(())
+    }
 
     fn draw_text<S: BackendTextStyle>(
         &mut self,
@@ -306,6 +348,9 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         _text: &str,
         _style: &S,
     ) -> Result<(u32, u32), DrawingErrorKind<Self::ErrorType>> {
+        // TODO: remove this debug
+        dbg!("==> estimate_text_size");
+
         // TODO: implement this, avoid using the built-in (heavy) font rasterizer
 
         Ok((0, 0))
@@ -324,6 +369,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 }
 
 impl From<&BackendColor> for ConrodBackendColor {
+    #[inline(always)]
     fn from(item: &BackendColor) -> Self {
         let ((r, g, b), a) = (item.rgb, item.alpha);
 
@@ -340,6 +386,7 @@ impl From<&BackendColor> for ConrodBackendColor {
 }
 
 impl Into<conrod::color::Color> for ConrodBackendColor {
+    #[inline(always)]
     fn into(self) -> conrod::color::Color {
         self.0
     }

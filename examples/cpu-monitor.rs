@@ -157,6 +157,7 @@ widget_ids!(struct Ids {
     conrod_wrapper,
     conrod_text,
     conrod_plot_points_line[],
+    conrod_plot_points_path[],
     conrod_plot_points_circle[],
     conrod_plot_points_text[],
 });
@@ -184,6 +185,8 @@ fn main() {
     let mut ids = Ids::new(interface.widget_id_generator());
 
     ids.conrod_plot_points_line
+        .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
+    ids.conrod_plot_points_path
         .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
     ids.conrod_plot_points_circle
         .resize(PLOT_IDS_MAXIMUM, &mut interface.widget_id_generator());
@@ -387,6 +390,7 @@ fn render_conrod_plot<'a, 'b>(
         ids.conrod_wrapper,
         font,
         &ids.conrod_plot_points_line,
+        &ids.conrod_plot_points_path,
         &ids.conrod_plot_points_circle,
         &ids.conrod_plot_points_text,
     )
