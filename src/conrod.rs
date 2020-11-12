@@ -414,10 +414,6 @@ impl ConrodBackendColor {
 fn convert_font_style(text: &str, size: f64) -> (f64, u32) {
     // Font size needs to be adjusted using a 90% factor, as to appear the same size than \
     //   when redered using the reference Bitmap backend.
-    let font_size_final = (size * 0.9) as u32;
-
-    // TODO: this is also ugly, should not have to do that
-    let text_width_estimated = (text.len() as f64 * size) * 0.6;
-
-    (text_width_estimated, font_size_final)
+    // Format: (text_width_estimated, font_size_final)
+    ((text.len() as f64 * size) * 0.6, (size * 0.9) as u32)
 }
