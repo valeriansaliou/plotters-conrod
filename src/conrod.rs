@@ -374,9 +374,9 @@ impl From<&BackendColor> for ConrodBackendColor {
     fn from(item: &BackendColor) -> Self {
         let ((r, g, b), a) = (item.rgb, item.alpha);
 
-        // Notice: correct alpha channel value, looks like there is a sqrt ratio between plotters and \
-        //   conrod color objects.
-        // TODO: this does not work fine for all alpha levels, is that color HSL or something else?
+        // Notice: correct alpha channel value, looks like there is a SQRT ratio between Plotters \
+        //   and Conrod color objects, where Plotters color objects seem to output the correct \
+        //   color alpha blend once rendered on screen.
         Self(conrod::color::Color::Rgba(
             r as f32 / 255.0,
             g as f32 / 255.0,
@@ -393,6 +393,7 @@ impl Into<conrod::color::Color> for ConrodBackendColor {
     }
 }
 
+#[inline(always)]
 fn convert_font_style(text: &str, size: f64) -> (f64, u32) {
     // Font size needs to be adjusted using a 90% factor, as to appear the same size than \
     //   when redered using the reference Bitmap backend.
