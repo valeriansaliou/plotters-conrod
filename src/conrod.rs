@@ -40,6 +40,7 @@ pub struct ConrodBackendPoints<'a> {
     path: &'a conrod::widget::id::List,   // TODO: super heavy
     circle: &'a conrod::widget::id::List, // TODO: super heavy
     text: &'a conrod::widget::id::List,   // TODO: super heavy
+    fill: &'a conrod::widget::id::List,   // TODO: super heavy
 }
 
 pub struct ConrodBackendIndexes {
@@ -48,6 +49,7 @@ pub struct ConrodBackendIndexes {
     path: usize,   // TODO: ugly
     circle: usize, // TODO: ugly
     text: usize,   // TODO: ugly
+    fill: usize,   // TODO: ugly
 }
 
 impl<'a, 'b> ConrodBackend<'a, 'b> {
@@ -61,6 +63,7 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
         points_path: &'b conrod::widget::id::List,
         points_circle: &'b conrod::widget::id::List,
         points_text: &'b conrod::widget::id::List,
+        points_fill: &'b conrod::widget::id::List,
     ) -> Self {
         Self {
             ui,
@@ -73,6 +76,7 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
                 path: points_path,
                 circle: points_circle,
                 text: points_text,
+                fill: points_fill,
             },
             indexes: ConrodBackendIndexes {
                 line: 0,
@@ -80,6 +84,7 @@ impl<'a, 'b> ConrodBackend<'a, 'b> {
                 path: 0,
                 circle: 0,
                 text: 0,
+                fill: 0,
             },
         }
     }
@@ -262,10 +267,39 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
     fn fill_polygon<S: BackendStyle, I: IntoIterator<Item = BackendCoord>>(
         &mut self,
-        _vert: I,
-        _style: &S,
+        vert: I,
+        style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
-        // Not supported yet (rendering ignored)
+        let polygon_style = conrod::widget::primitive::shape::Style::fill_with(
+            ConrodBackendColor::from(&style.color()).into(),
+        );
+
+        // TODO: commonize calls to this in a method
+        // TODO: this is ugly, as we cannot reference by coords due to collisions
+        let index = self.indexes.fill;
+        self.indexes.fill += 1;
+
+        // Acquire parent bounding box in absolute coordinates (required for polygon points \
+        //   positioning)
+        // TODO: commonize this w/ the draw_line fn + always inline?
+        if let Some(parent_rect) = self.ui.rect_of(self.parent) {
+            let (box_x_start, box_y_end) = (parent_rect.x.start as i32, parent_rect.y.end as i32);
+
+            // TODO: fix a weird issue where conrod tries to close the polygon path in an invalid \
+            //   way, which produces weird graphics.
+            // TODO: remove the absolute positioning thing? (find a way to do clean relative \
+            //   positioning straight out of the box)
+            // TODO: can we make this iterator thing zero-alloc? looks like we cannot as conrod \
+            //   excepts an IntoIterator<Point> to be passed in, and not an Iterator<Point>, sadly.
+            conrod::widget::polygon::Polygon::abs_styled(
+                vert.into_iter()
+                    .map(|vertex| [(vertex.0 + box_x_start) as _, (-vertex.1 + box_y_end) as _])
+                    .collect::<Vec<conrod::position::Point>>(),
+                polygon_style,
+            )
+            .top_left_of(self.parent)
+            .set(self.points.fill[index], &mut self.ui);
+        }
 
         Ok(())
     }
