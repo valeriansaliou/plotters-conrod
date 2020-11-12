@@ -448,7 +448,7 @@ fn plot<D: IntoDrawingArea>(
             AreaSeries::new(
                 data_points.iter().map(|x| (x.0, x.1 as i32)),
                 0,
-                &PLOT_LINE_COLOR.mix(0.2),
+                &PLOT_LINE_COLOR.mix(0.175),
             )
             .border_style(
                 ShapeStyle::from(&PLOT_LINE_COLOR).stroke_width(2)
