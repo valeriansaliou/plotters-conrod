@@ -21,16 +21,19 @@ struct ConrodBackendPosition {
 
 struct ConrodBackendColor(conrod::color::Color);
 
+type ConrodBackendPathBrushPointInner = [i32; 2];
+type ConrodBackendPathBrushPointOuter = [f64; 2];
+
 enum ConrodBackendPathBrushGroup {
     None,
-    X(f64),
-    Y(f64),
+    X(i32),
+    Y(i32),
 }
 
-struct ConrodBackendPathBrush<I: Iterator<Item = [f64; 2]>> {
+struct ConrodBackendPathBrush<I: Iterator<Item = ConrodBackendPathBrushPointInner>> {
     source_points: I,
     current_group: ConrodBackendPathBrushGroup,
-    last_point: Option<[f64; 2]>
+    last_point: Option<ConrodBackendPathBrushPointInner>
 }
 
 #[derive(Debug)]
@@ -135,8 +138,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
             // Render line widget
             conrod::widget::line::Line::abs_styled(
-                position.abs_point(&from),
-                position.abs_point(&to),
+                position.abs_point_f64(&from),
+                position.abs_point_f64(&to),
                 line_style,
             )
             .top_left_of(self.parent)
@@ -199,7 +202,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             // Render point path widget
             conrod::widget::point_path::PointPath::abs_styled(
                 path.into_iter()
-                    .map(|point| position.abs_point(&point))
+                    .map(|point| position.abs_point_f64(&point))
                     .collect::<Vec<conrod::position::Point>>(),
                 line_style,
             )
@@ -255,9 +258,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
             // Paint a simplified point, where empty areas are removed. This is required for \
             //   triangulation to operate properly.
-            // TODO: iter do not collect using size_hint() ?
             let final_points: Vec<_> = ConrodBackendPathBrush::from(
-                vert.into_iter().map(|vertex| position.abs_point(&vertex))
+                vert.into_iter().map(|vertex| position.abs_point_i32(&vertex))
             ).collect();
 
             // Is that enough points to form at least a triangle?
@@ -274,8 +276,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 
                 for index in 0..triangles.size() {
                     conrod::widget::polygon::Polygon::abs_styled(
-                        // TODO: zero alloc possible?
-                        triangles.get_triangle(index).points.to_vec(),
+                        triangles.get_triangle(index).points.iter().copied(),
                         polygon_style
                     )
                         .top_left_of(self.parent)
@@ -367,10 +368,17 @@ impl ConrodBackendPosition {
     }
 
     #[inline(always)]
-    fn abs_point(&self, point: &BackendCoord) -> [f64; 2] {
+    fn abs_point_f64(&self, point: &BackendCoord) -> [f64; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
-        [(point.0 + self.x_start) as _, (-point.1 + self.y_end) as _]
+        [(point.0 + self.x_start) as f64, (-point.1 + self.y_end) as f64]
+    }
+
+    #[inline(always)]
+    fn abs_point_i32(&self, point: &BackendCoord) -> [i32; 2] {
+        // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
+        //   the full rendering space.
+        [(point.0 + self.x_start) as i32, (-point.1 + self.y_end) as i32]
     }
 }
 
@@ -498,18 +506,18 @@ impl std::fmt::Display for ConrodBackendError {
 
 impl std::error::Error for ConrodBackendError {}
 
-impl<I: Iterator<Item = [f64; 2]>> ConrodBackendPathBrush<I> {
+impl<I: Iterator<Item = ConrodBackendPathBrushPointInner>> ConrodBackendPathBrush<I> {
     fn from(source_points: I) -> Self {
         Self {
-            source_points: source_points,
+            source_points,
             current_group: ConrodBackendPathBrushGroup::None,
             last_point: None,
         }
     }
 }
 
-impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
-    type Item = [f64; 2];
+impl<I: Iterator<Item = ConrodBackendPathBrushPointInner>> Iterator for ConrodBackendPathBrush<I> {
+    type Item = ConrodBackendPathBrushPointOuter;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Branch to source points iterator (exhaust next group)
@@ -521,6 +529,8 @@ impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
 
                 // De-duplicate points
                 if point_before != point {
+                    let mut do_yield = false;
+
                     match self.current_group {
                         ConrodBackendPathBrushGroup::None => {
                             if point_before[0] == point[0] {
@@ -530,7 +540,7 @@ impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
                             }
 
                             // Yield start-of-group or isolated point
-                            return Some(point_before);
+                            do_yield = true;
                         }
                         ConrodBackendPathBrushGroup::X(opener_x) => {
                             // Close current X group? (using 'before' point)
@@ -538,7 +548,7 @@ impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
                                 self.current_group = ConrodBackendPathBrushGroup::None;
 
                                 // Yield end-of-group point
-                                return Some(point_before);
+                                do_yield = true;
                             }
                         }
                         ConrodBackendPathBrushGroup::Y(opener_y) => {
@@ -547,9 +557,13 @@ impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
                                 self.current_group = ConrodBackendPathBrushGroup::None;
 
                                 // Yield end-of-group point
-                                return Some(point_before);
+                                do_yield = true;
                             }
                         }
+                    }
+
+                    if do_yield {
+                        return Some([point_before[0] as _, point_before[1] as _]);
                     }
                 }
             } else {
@@ -562,7 +576,7 @@ impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
         if let Some(last_point) = self.last_point {
             self.last_point = None;
 
-            return Some(last_point);
+            return Some([last_point[0] as _, last_point[1] as _]);
         }
 
         // Done painting all path points
