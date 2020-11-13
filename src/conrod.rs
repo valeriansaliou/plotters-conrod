@@ -327,6 +327,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
 }
 
 impl ConrodBackendPosition {
+    #[inline(always)]
     fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
         if let Some(parent_rect) = ui.rect_of(parent) {
             Some(Self {
@@ -338,6 +339,7 @@ impl ConrodBackendPosition {
         }
     }
 
+    #[inline(always)]
     fn abs_point(&self, point: &BackendCoord) -> [f64; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
@@ -401,6 +403,7 @@ impl ConrodBackendReusableGraph {
         }
     }
 
+    #[inline(always)]
     fn prepare(&mut self) {
         // Notice: destructuring is used there as a safety measure, so that no field is \
         //   forgotten, which could be dangerous (ie. risk of memory leak).
@@ -428,6 +431,7 @@ impl ConrodBackendReusableGraphAtom {
         Self(conrod::widget::id::List::new(), 0)
     }
 
+    #[inline(always)]
     fn next(&mut self, ui: &mut conrod::UiCell) -> conrod::widget::Id {
         // Acquire current index (ie. last 'next index')
         let current_index = self.1;
@@ -452,6 +456,7 @@ impl ConrodBackendReusableGraphAtom {
         self.0[current_index]
     }
 
+    #[inline(always)]
     fn reset(&mut self) {
         // Rollback the incremented IDs counter back to zero
         self.1 = 0;
