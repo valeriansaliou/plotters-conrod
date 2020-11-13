@@ -1,16 +1,7 @@
 language: rust
 rust:
+  - stable
+  - beta
   - nightly
 
 cache: cargo
-
-jobs:
-  before_install:
-    - sudo apt-get update -y
-    - sudo apt-get install -y libxcb-shape0 libxcb-shape0-dev libxcb-xfixes0 libxcb-xfixes0-dev
-    - if [[ ! $(cargo --list | grep fmt) ]]; then cargo install rustfmt-nightly; fi
-    - if [[ ! $(cargo --list | grep clippy) ]]; then cargo install clippy; fi
-
-  script:
-    - cargo fmt --all -- --check
-    - cargo clippy --all-targets --all-features -- -D warnings
