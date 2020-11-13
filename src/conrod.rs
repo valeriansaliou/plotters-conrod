@@ -33,7 +33,7 @@ enum ConrodBackendPathBrushGroup {
 struct ConrodBackendPathBrush<I: Iterator<Item = ConrodBackendPathBrushPointInner>> {
     source_points: I,
     current_group: ConrodBackendPathBrushGroup,
-    last_point: Option<ConrodBackendPathBrushPointInner>
+    last_point: Option<ConrodBackendPathBrushPointInner>,
 }
 
 #[derive(Debug)]
@@ -259,8 +259,10 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             // Paint a simplified point, where empty areas are removed. This is required for \
             //   triangulation to operate properly.
             let final_points: Vec<_> = ConrodBackendPathBrush::from(
-                vert.into_iter().map(|vertex| position.abs_point_i32(&vertex))
-            ).collect();
+                vert.into_iter()
+                    .map(|vertex| position.abs_point_i32(&vertex)),
+            )
+            .collect();
 
             // Is that enough points to form at least a triangle?
             if final_points.len() >= 3 {
@@ -277,10 +279,10 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 for index in 0..triangles.size() {
                     conrod::widget::polygon::Polygon::abs_styled(
                         triangles.get_triangle(index).points.iter().copied(),
-                        polygon_style
+                        polygon_style,
                     )
-                        .top_left_of(self.parent)
-                        .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
+                    .top_left_of(self.parent)
+                    .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
                 }
             }
 
@@ -371,14 +373,20 @@ impl ConrodBackendPosition {
     fn abs_point_f64(&self, point: &BackendCoord) -> [f64; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
-        [(point.0 + self.x_start) as f64, (-point.1 + self.y_end) as f64]
+        [
+            (point.0 + self.x_start) as f64,
+            (-point.1 + self.y_end) as f64,
+        ]
     }
 
     #[inline(always)]
     fn abs_point_i32(&self, point: &BackendCoord) -> [i32; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
-        [(point.0 + self.x_start) as i32, (-point.1 + self.y_end) as i32]
+        [
+            (point.0 + self.x_start) as i32,
+            (-point.1 + self.y_end) as i32,
+        ]
     }
 }
 
@@ -534,9 +542,11 @@ impl<I: Iterator<Item = ConrodBackendPathBrushPointInner>> Iterator for ConrodBa
                     match self.current_group {
                         ConrodBackendPathBrushGroup::None => {
                             if point_before[0] == point[0] {
-                                self.current_group = ConrodBackendPathBrushGroup::X(point_before[0]);
+                                self.current_group =
+                                    ConrodBackendPathBrushGroup::X(point_before[0]);
                             } else if point_before[1] == point[1] {
-                                self.current_group = ConrodBackendPathBrushGroup::Y(point_before[1]);
+                                self.current_group =
+                                    ConrodBackendPathBrushGroup::Y(point_before[1]);
                             }
 
                             // Yield start-of-group or isolated point
