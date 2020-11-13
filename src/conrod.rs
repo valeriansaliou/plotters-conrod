@@ -21,6 +21,18 @@ struct ConrodBackendPosition {
 
 struct ConrodBackendColor(conrod::color::Color);
 
+enum ConrodBackendPathBrushGroup {
+    None,
+    X(f64),
+    Y(f64),
+}
+
+struct ConrodBackendPathBrush<I: Iterator<Item = [f64; 2]>> {
+    source_points: I,
+    current_group: ConrodBackendPathBrushGroup,
+    last_point: Option<[f64; 2]>
+}
+
 #[derive(Debug)]
 /// Indicates that some error occured within the Conrod backend
 pub enum ConrodBackendError {
@@ -241,20 +253,35 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // Acquire absolute position generator (in parent container)
         if let Some(position) = ConrodBackendPosition::from(&self.ui, self.parent) {
-            // Generate polygon style
-            let polygon_style = conrod::widget::primitive::shape::Style::fill_with(
-                ConrodBackendColor::from(&style.color()).into(),
-            );
+            // Paint a simplified point, where empty areas are removed. This is required for \
+            //   triangulation to operate properly.
+            // TODO: iter do not collect using size_hint() ?
+            let final_points: Vec<_> = ConrodBackendPathBrush::from(
+                vert.into_iter().map(|vertex| position.abs_point(&vertex))
+            ).collect();
 
-            // Render polygon widget
-            conrod::widget::polygon::Polygon::abs_styled(
-                vert.into_iter()
-                    .map(|vertex| position.abs_point(&vertex))
-                    .collect::<Vec<conrod::position::Point>>(),
-                polygon_style,
-            )
-            .top_left_of(self.parent)
-            .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
+            // Is that enough points to form at least a triangle?
+            if final_points.len() >= 3 {
+                // Generate polygon style
+                let polygon_style = conrod::widget::primitive::shape::Style::fill_with(
+                    ConrodBackendColor::from(&style.color()).into(),
+                );
+
+                // Triangulate the polygon points, giving back a list of triangles that can be \
+                //   filled into a contiguous area.
+                // Notice: this method takes into account concave shapes
+                let triangles = poly2tri::triangulate_points(final_points.iter());
+
+                for index in 0..triangles.size() {
+                    conrod::widget::polygon::Polygon::abs_styled(
+                        // TODO: zero alloc possible?
+                        triangles.get_triangle(index).points.to_vec(),
+                        polygon_style
+                    )
+                        .top_left_of(self.parent)
+                        .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
+                }
+            }
 
             Ok(())
         } else {
@@ -470,6 +497,78 @@ impl std::fmt::Display for ConrodBackendError {
 }
 
 impl std::error::Error for ConrodBackendError {}
+
+impl<I: Iterator<Item = [f64; 2]>> ConrodBackendPathBrush<I> {
+    fn from(source_points: I) -> Self {
+        Self {
+            source_points: source_points,
+            current_group: ConrodBackendPathBrushGroup::None,
+            last_point: None,
+        }
+    }
+}
+
+impl<I: Iterator<Item = [f64; 2]>> Iterator for ConrodBackendPathBrush<I> {
+    type Item = [f64; 2];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Branch to source points iterator (exhaust next group)
+        while let Some(point) = self.source_points.next() {
+            // Backtrack in points
+            if let Some(point_before) = self.last_point {
+                // Retain current point as 'last point'
+                self.last_point = Some(point);
+
+                // De-duplicate points
+                if point_before != point {
+                    match self.current_group {
+                        ConrodBackendPathBrushGroup::None => {
+                            if point_before[0] == point[0] {
+                                self.current_group = ConrodBackendPathBrushGroup::X(point_before[0]);
+                            } else if point_before[1] == point[1] {
+                                self.current_group = ConrodBackendPathBrushGroup::Y(point_before[1]);
+                            }
+
+                            // Yield start-of-group or isolated point
+                            return Some(point_before);
+                        }
+                        ConrodBackendPathBrushGroup::X(opener_x) => {
+                            // Close current X group? (using 'before' point)
+                            if point[0] != opener_x {
+                                self.current_group = ConrodBackendPathBrushGroup::None;
+
+                                // Yield end-of-group point
+                                return Some(point_before);
+                            }
+                        }
+                        ConrodBackendPathBrushGroup::Y(opener_y) => {
+                            // Close current Y group? (using 'before' point)
+                            if point[1] != opener_y {
+                                self.current_group = ConrodBackendPathBrushGroup::None;
+
+                                // Yield end-of-group point
+                                return Some(point_before);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Retain first point as 'last point'
+                self.last_point = Some(point);
+            }
+        }
+
+        // End of the source points iterator, close path? (this yields)
+        if let Some(last_point) = self.last_point {
+            self.last_point = None;
+
+            return Some(last_point);
+        }
+
+        // Done painting all path points
+        None
+    }
+}
 
 #[inline(always)]
 fn convert_font_style(text: &str, size: f64) -> (f64, u32) {

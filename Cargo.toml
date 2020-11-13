@@ -13,6 +13,7 @@ authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 
 [dependencies]
 plotters-backend = "0.3"
+poly2tri = "0.1"
 conrod_core = "^0.70"
 
 [dev-dependencies]
