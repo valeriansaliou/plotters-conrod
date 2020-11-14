@@ -42,14 +42,14 @@ impl ShapeSplitter {
         // Intersect each segment with all of its following segments, iteratively, and \
         //   create paths for closed shapes.
         for index in 0..self.path_segments.len() {
-            let ref path_segment = self.path_segments[index];
+            let path_segment = &self.path_segments[index];
 
             // Push opening point
             closed_shapes[current_shape_index]
                 .push([path_segment.line.start.x(), path_segment.line.start.y()]);
 
             for sibling_index in (index + 1)..self.path_segments.len() {
-                let ref sibling_path_segment = self.path_segments[sibling_index];
+                let sibling_path_segment = &self.path_segments[sibling_index];
 
                 // The lines are not directly connected? Proceed with intersection check.
                 if path_segment.line.end != sibling_path_segment.line.start {
