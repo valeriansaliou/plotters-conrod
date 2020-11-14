@@ -14,6 +14,11 @@
    See the documentation for [ConrodBackend](struct.ConrodBackend.html) for more details.
 */
 
-mod conrod;
+mod backend;
+mod error;
+mod graph;
+mod utils;
 
-pub use conrod::{ConrodBackend, ConrodBackendError, ConrodBackendReusableGraph};
+pub use backend::ConrodBackend;
+pub use error::ConrodBackendError;
+pub use graph::ConrodBackendReusableGraph;
