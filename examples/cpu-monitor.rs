@@ -414,6 +414,7 @@ fn plot<D: IntoDrawingArea>(
         .configure_mesh()
         .bold_line_style(&plotters::style::colors::WHITE.mix(0.1))
         .light_line_style(&plotters::style::colors::WHITE.mix(0.05))
+        .axis_style(ShapeStyle::from(&plotters::style::colors::WHITE.mix(0.45)).stroke_width(1))
         .y_labels(10)
         .y_label_style(
             ("sans-serif", 15)
