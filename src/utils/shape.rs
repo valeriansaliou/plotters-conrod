@@ -70,7 +70,10 @@ impl ShapeSplitter {
         }
 
         // Close the first shape with the last point from the original shape?
-        if !closed_shapes.is_empty() && !closed_shapes[0].is_empty() {
+        if !closed_shapes.is_empty()
+            && !closed_shapes[0].is_empty()
+            && closed_shapes[0][0] != self.last_point
+        {
             closed_shapes[0].push(self.last_point);
         }
 
