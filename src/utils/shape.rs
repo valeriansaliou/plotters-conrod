@@ -141,6 +141,7 @@ impl ShapeSplitter {
     }
 
     #[inline(always)]
+    #[allow(clippy::float_cmp)]
     fn append_point(container: &mut Vec<ShapeSplitterPoint>, point: ShapeSplitterPoint) {
         let container_size = container.len();
 
