@@ -46,6 +46,7 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
 
                     match self.current_group {
                         PathSimplifierGroup::None => {
+                            // Start a new group from last closed group? (backtrack on X or Y)
                             if point_before[0] == point[0] {
                                 self.current_group = PathSimplifierGroup::X(point_before[0]);
                             } else if point_before[1] == point[1] {
@@ -58,7 +59,16 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
                         PathSimplifierGroup::X(opener_x) => {
                             // Close current X group? (using 'before' point)
                             if point[0] != opener_x {
-                                self.current_group = PathSimplifierGroup::None;
+                                // Start a new Y group immediately? (immediate backtrack on Y)
+                                // Notice: this is an edge case which prevents the next start of \
+                                //   group to be skipped in cases where the last group intersects \
+                                //   with the next group, on a point on the segment (ie. not on \
+                                //   its edges).
+                                if point_before[1] == point[1] {
+                                    self.current_group = PathSimplifierGroup::Y(point_before[1]);
+                                } else {
+                                    self.current_group = PathSimplifierGroup::None;
+                                }
 
                                 // Yield end-of-group point
                                 do_yield = true;
@@ -67,7 +77,16 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
                         PathSimplifierGroup::Y(opener_y) => {
                             // Close current Y group? (using 'before' point)
                             if point[1] != opener_y {
-                                self.current_group = PathSimplifierGroup::None;
+                                // Start a new X group immediately? (immediate backtrack on X)
+                                // Notice: this is an edge case which prevents the next start of \
+                                //   group to be skipped in cases where the last group intersects \
+                                //   with the next group, on a point on the segment (ie. not on \
+                                //   its edges).
+                                if point_before[0] == point[0] {
+                                    self.current_group = PathSimplifierGroup::X(point_before[0]);
+                                } else {
+                                    self.current_group = PathSimplifierGroup::None;
+                                }
 
                                 // Yield end-of-group point
                                 do_yield = true;
