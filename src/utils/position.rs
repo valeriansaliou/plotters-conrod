@@ -7,14 +7,14 @@
 use conrod_core as conrod;
 use plotters_backend::BackendCoord;
 
-pub struct PositionParent {
+pub(crate) struct PositionParent {
     x_start: i32,
     y_end: i32,
 }
 
 impl PositionParent {
     #[inline(always)]
-    pub fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
+    pub(crate) fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
         if let Some(parent_rect) = ui.rect_of(parent) {
             Some(Self {
                 x_start: parent_rect.x.start as _,
@@ -26,7 +26,7 @@ impl PositionParent {
     }
 
     #[inline(always)]
-    pub fn abs_point_f64(&self, point: &BackendCoord) -> [f64; 2] {
+    pub(crate) fn abs_point_f64(&self, point: &BackendCoord) -> [f64; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
         [
@@ -36,7 +36,7 @@ impl PositionParent {
     }
 
     #[inline(always)]
-    pub fn abs_point_i32(&self, point: &BackendCoord) -> [i32; 2] {
+    pub(crate) fn abs_point_i32(&self, point: &BackendCoord) -> [i32; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
         [

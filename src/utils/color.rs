@@ -7,7 +7,7 @@
 use conrod_core as conrod;
 use plotters_backend::BackendColor;
 
-pub struct Color(conrod::color::Color);
+pub(crate) struct Color(conrod::color::Color);
 
 impl From<&BackendColor> for Color {
     #[inline(always)]

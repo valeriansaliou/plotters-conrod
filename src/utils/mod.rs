@@ -4,8 +4,8 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: MIT
 
-pub mod color;
-pub mod convert;
-pub mod path;
-pub mod position;
-pub mod shape;
+pub(crate) mod color;
+pub(crate) mod convert;
+pub(crate) mod path;
+pub(crate) mod position;
+pub(crate) mod shape;

@@ -9,13 +9,13 @@ use num_traits::identities::{One, Zero};
 type ShapeSplitterValue = f64;
 type ShapeSplitterPoint = [ShapeSplitterValue; 2];
 
-pub struct ShapeSplitter {
+pub(crate) struct ShapeSplitter {
     last_point: ShapeSplitterPoint,
     path_segments: Vec<[ShapeSplitterPoint; 2]>,
 }
 
 impl ShapeSplitter {
-    pub fn try_from(path: &[ShapeSplitterPoint]) -> Result<Self, ()> {
+    pub(crate) fn try_from(path: &[ShapeSplitterPoint]) -> Result<Self, ()> {
         // Only proceed if we have enough points to form at least a triangle
         if path.len() >= 3 {
             // Map all unique segments for the simplified path
@@ -37,7 +37,7 @@ impl ShapeSplitter {
     }
 
     #[allow(clippy::float_cmp)]
-    pub fn collect(&mut self) -> Vec<Vec<ShapeSplitterPoint>> {
+    pub(crate) fn collect(&mut self) -> Vec<Vec<ShapeSplitterPoint>> {
         let (mut closed_shapes, mut current_shape_index) = (vec![Vec::new()], 0);
 
         // Intersect each segment with all of its following segments, iteratively, and \

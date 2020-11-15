@@ -13,14 +13,14 @@ enum PathSimplifierGroup {
     Y(i32),
 }
 
-pub struct PathSimplifier<I: Iterator<Item = PathSimplifierPointInner>> {
+pub(crate) struct PathSimplifier<I: Iterator<Item = PathSimplifierPointInner>> {
     source_points: I,
     current_group: PathSimplifierGroup,
     last_point: Option<PathSimplifierPointInner>,
 }
 
 impl<I: Iterator<Item = PathSimplifierPointInner>> PathSimplifier<I> {
-    pub fn from(source_points: I) -> Self {
+    pub(crate) fn from(source_points: I) -> Self {
         Self {
             source_points,
             current_group: PathSimplifierGroup::None,

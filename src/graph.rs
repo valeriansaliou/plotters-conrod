@@ -10,15 +10,15 @@ const BACKEND_GRAPH_RESIZE_CHUNK: usize = 100;
 
 /// The re-usable graph of Conrod widget IDs, to be re-used for each plot draw (building it is expensive, re-using it is cheap; so build it once and re-use it across loop calls)
 pub struct ConrodBackendReusableGraph {
-    pub line: ConrodBackendReusableGraphAtom,
-    pub rect: ConrodBackendReusableGraphAtom,
-    pub path: ConrodBackendReusableGraphAtom,
-    pub circle: ConrodBackendReusableGraphAtom,
-    pub text: ConrodBackendReusableGraphAtom,
-    pub fill: ConrodBackendReusableGraphAtom,
+    pub(crate) line: ConrodBackendReusableGraphAtom,
+    pub(crate) rect: ConrodBackendReusableGraphAtom,
+    pub(crate) path: ConrodBackendReusableGraphAtom,
+    pub(crate) circle: ConrodBackendReusableGraphAtom,
+    pub(crate) text: ConrodBackendReusableGraphAtom,
+    pub(crate) fill: ConrodBackendReusableGraphAtom,
 }
 
-pub struct ConrodBackendReusableGraphAtom(conrod::widget::id::List, usize);
+pub(crate) struct ConrodBackendReusableGraphAtom(conrod::widget::id::List, usize);
 
 impl ConrodBackendReusableGraph {
     /// Build a new Conrod backend re-usable graph of widget identifiers
@@ -36,7 +36,7 @@ impl ConrodBackendReusableGraph {
     }
 
     #[inline(always)]
-    pub fn prepare(&mut self) {
+    pub(crate) fn prepare(&mut self) {
         // Notice: destructuring is used there as a safety measure, so that no field is \
         //   forgotten, which could be dangerous (ie. risk of memory leak).
         let Self {
@@ -64,7 +64,7 @@ impl ConrodBackendReusableGraphAtom {
     }
 
     #[inline(always)]
-    pub fn next(&mut self, ui: &mut conrod::UiCell) -> conrod::widget::Id {
+    pub(crate) fn next(&mut self, ui: &mut conrod::UiCell) -> conrod::widget::Id {
         // Acquire current index (ie. last 'next index')
         let current_index = self.1;
 
