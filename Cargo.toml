@@ -14,8 +14,7 @@ authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 [dependencies]
 plotters-backend = "0.3"
 poly2tri = "0.1"
-line_intersection = "0.4"
-geo = "0.4"
+num-traits = "0.2"
 conrod_core = "^0.70"
 
 [dev-dependencies]

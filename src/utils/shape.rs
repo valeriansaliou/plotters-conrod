@@ -4,11 +4,14 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: MIT
 
-type ShapeSplitterPoint = [f64; 2];
+use num_traits::identities::{One, Zero};
+
+type ShapeSplitterValue = f64;
+type ShapeSplitterPoint = [ShapeSplitterValue; 2];
 
 pub struct ShapeSplitter {
     last_point: ShapeSplitterPoint,
-    path_segments: Vec<line_intersection::LineInterval<f64>>,
+    path_segments: Vec<[ShapeSplitterPoint; 2]>,
 }
 
 impl ShapeSplitter {
@@ -16,15 +19,12 @@ impl ShapeSplitter {
         // Only proceed if we have enough points to form at least a triangle
         if path.len() >= 3 {
             // Map all unique segments for the simplified path
-            let mut path_segments: Vec<line_intersection::LineInterval<f64>> = Vec::new();
+            let mut path_segments = Vec::new();
 
             for index in 0..(path.len() - 1) {
                 let (current_point, next_point) = (path[index], path[index + 1]);
 
-                path_segments.push(line_intersection::LineInterval::line_segment(geo::Line {
-                    start: (current_point[0], current_point[1]).into(),
-                    end: (next_point[0], next_point[1]).into(),
-                }));
+                path_segments.push([current_point, next_point]);
             }
 
             Ok(Self {
@@ -45,27 +45,22 @@ impl ShapeSplitter {
             let path_segment = &self.path_segments[index];
 
             // Push opening point
-            closed_shapes[current_shape_index]
-                .push([path_segment.line.start.x(), path_segment.line.start.y()]);
+            closed_shapes[current_shape_index].push(path_segment[0]);
 
             for sibling_index in (index + 1)..self.path_segments.len() {
                 let sibling_path_segment = &self.path_segments[sibling_index];
 
                 // The lines are not directly connected? Proceed with intersection check.
-                if path_segment.line.end != sibling_path_segment.line.start {
-                    let intersection = path_segment
-                        .relate(sibling_path_segment)
-                        .unique_intersection();
+                if path_segment[1] != sibling_path_segment[0] {
+                    let intersection = Self::intersects(path_segment, sibling_path_segment);
 
                     // An intersection has been found, the current shape can be closed and yielded
-                    if let Some(geo::Point(point_intersect)) = intersection {
+                    if let Some(point_intersect) = intersection {
                         // Close current closed shape at this point
-                        closed_shapes[current_shape_index]
-                            .push([point_intersect.x.round(), point_intersect.y.round()]);
+                        closed_shapes[current_shape_index].push(point_intersect);
 
                         // Start a new shape at this point (will be closed upon a future iteration)
-                        closed_shapes
-                            .push(vec![[point_intersect.x.round(), point_intersect.y.round()]]);
+                        closed_shapes.push(vec![point_intersect]);
 
                         current_shape_index += 1;
                     }
@@ -79,5 +74,50 @@ impl ShapeSplitter {
         }
 
         closed_shapes
+    }
+
+    fn intersects(
+        line: &[ShapeSplitterPoint; 2],
+        other: &[ShapeSplitterPoint; 2],
+    ) -> Option<ShapeSplitterPoint> {
+        // Adapted from: https://github.com/ucarion/line_intersection/blob/master/src/lib.rs#L108
+
+        let p = line[0];
+        let q = other[0];
+        let r = [line[1][0] - line[0][0], line[1][1] - line[0][1]];
+        let s = [other[1][0] - other[0][0], other[1][1] - other[0][1]];
+
+        let r_cross_s = Self::point_cross(&r, &s);
+        let q_minus_p = [q[0] - p[0], q[1] - p[1]];
+
+        // Lines parallel? Ignore.
+        if r_cross_s == ShapeSplitterValue::zero() {
+            None
+        } else {
+            // Lines are not parallel, continue.
+            let t = Self::point_cross(&q_minus_p, &Self::point_divide(&s, r_cross_s));
+            let u = Self::point_cross(&q_minus_p, &Self::point_divide(&r, r_cross_s));
+
+            // Do the lines intersect in one point?
+            let t_in_range = ShapeSplitterValue::zero() <= t && t <= ShapeSplitterValue::one();
+            let u_in_range = ShapeSplitterValue::zero() <= u && u <= ShapeSplitterValue::one();
+
+            if t_in_range && u_in_range {
+                // Return intersection point coordinates (rounded as to avoid floating point errors)
+                Some([(p[0] + t * r[0]).round(), (p[1] + t * r[1]).round()])
+            } else {
+                None
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn point_cross(point: &ShapeSplitterPoint, other: &ShapeSplitterPoint) -> ShapeSplitterValue {
+        point[0] * other[1] - point[1] * other[0]
+    }
+
+    #[inline(always)]
+    fn point_divide(point: &ShapeSplitterPoint, other: ShapeSplitterValue) -> ShapeSplitterPoint {
+        [point[0] / other, point[1] / other]
     }
 }
