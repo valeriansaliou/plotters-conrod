@@ -59,22 +59,35 @@ impl ShapeSplitter {
 
                     // An intersection has been found, the current shape can be closed and yielded
                     if let Some(point_intersect) = intersection {
-                        // Close current closed shape at this point
-                        closed_shapes[current_shape_index].push(point_intersect);
+                        // Close current closed shape at this point (ensure we are not pushing an \
+                        //   intersection equal to the starting point right after it; in this case \
+                        //   we can continue adding points on this shape)
+                        let current_shape_size = closed_shapes[current_shape_index].len();
 
-                        // Start a new shape at this point (will be closed upon a future iteration)
-                        closed_shapes.push(vec![point_intersect]);
+                        if closed_shapes[current_shape_index][current_shape_size - 1]
+                            != point_intersect
+                        {
+                            closed_shapes[current_shape_index].push(point_intersect);
 
-                        current_shape_index += 1;
+                            // Start a new shape at this point (will be closed upon a future iteration)
+                            closed_shapes.push(vec![point_intersect]);
+
+                            current_shape_index += 1;
+                        }
                     }
                 }
             }
         }
 
         // Close the first shape with the last point from the original shape?
+        // Notice: require at least 2 points to close the shape. Closing a shape containing 1 \
+        //   single point does not make sense. Also, points shall not be repeated, hence why \
+        //   there is a check that we are not closing the shape with either its starting point, or \
+        //   already-there ending point.
         if !closed_shapes.is_empty()
-            && !closed_shapes[0].is_empty()
+            && closed_shapes[0].len() >= 2
             && closed_shapes[0][0] != self.last_point
+            && closed_shapes[0][closed_shapes[0].len() - 1] != self.last_point
         {
             closed_shapes[0].push(self.last_point);
         }
