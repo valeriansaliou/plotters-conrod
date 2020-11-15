@@ -52,7 +52,9 @@ impl ShapeSplitter {
                 let sibling_path_segment = &self.path_segments[sibling_index];
 
                 // The lines are not directly connected? Proceed with intersection check.
-                if path_segment[1] != sibling_path_segment[0] {
+                if path_segment[1] != sibling_path_segment[0]
+                    && path_segment[0] != sibling_path_segment[1]
+                {
                     let intersection = Self::intersects(path_segment, sibling_path_segment);
 
                     // An intersection has been found, the current shape can be closed and yielded
