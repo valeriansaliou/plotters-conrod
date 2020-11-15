@@ -36,6 +36,7 @@ impl ShapeSplitter {
         }
     }
 
+    #[allow(clippy::float_cmp)]
     pub fn collect(&mut self) -> Vec<Vec<ShapeSplitterPoint>> {
         let (mut closed_shapes, mut current_shape_index) = (vec![Vec::new()], 0);
 
@@ -76,6 +77,7 @@ impl ShapeSplitter {
         closed_shapes
     }
 
+    #[allow(clippy::many_single_char_names, clippy::float_cmp)]
     fn intersects(
         line: &[ShapeSplitterPoint; 2],
         other: &[ShapeSplitterPoint; 2],
