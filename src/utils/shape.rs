@@ -45,8 +45,11 @@ impl ShapeSplitter {
         for index in 0..self.path_segments.len() {
             let path_segment = &self.path_segments[index];
 
-            // Push opening point
-            closed_shapes[current_shape_index].push(path_segment[0]);
+            // Push opening (or current) point?
+            // Notice: check that previously pushed point does not match opening point, as in some \
+            //   cases the last pushed intersection point would be equal to the opening point to \
+            //   push there.
+            Self::append_point(&mut closed_shapes[current_shape_index], path_segment[0]);
 
             for sibling_index in (index + 1)..self.path_segments.len() {
                 let sibling_path_segment = &self.path_segments[sibling_index];
@@ -60,20 +63,16 @@ impl ShapeSplitter {
                     // An intersection has been found, the current shape can be closed and yielded
                     if let Some(point_intersect) = intersection {
                         // Close current closed shape at this point (ensure we are not pushing an \
-                        //   intersection equal to the starting point right after it; in this case \
-                        //   we can continue adding points on this shape)
-                        let current_shape_size = closed_shapes[current_shape_index].len();
+                        //   intersection equal to the starting point right after it)
+                        Self::append_point(
+                            &mut closed_shapes[current_shape_index],
+                            point_intersect,
+                        );
 
-                        if closed_shapes[current_shape_index][current_shape_size - 1]
-                            != point_intersect
-                        {
-                            closed_shapes[current_shape_index].push(point_intersect);
+                        // Start a new shape at this point (will be closed upon a future iteration)
+                        closed_shapes.push(vec![point_intersect]);
 
-                            // Start a new shape at this point (will be closed upon a future iteration)
-                            closed_shapes.push(vec![point_intersect]);
-
-                            current_shape_index += 1;
-                        }
+                        current_shape_index += 1;
                     }
                 }
             }
@@ -139,5 +138,14 @@ impl ShapeSplitter {
     #[inline(always)]
     fn point_divide(point: &ShapeSplitterPoint, other: ShapeSplitterValue) -> ShapeSplitterPoint {
         [point[0] / other, point[1] / other]
+    }
+
+    #[inline(always)]
+    fn append_point(container: &mut Vec<ShapeSplitterPoint>, point: ShapeSplitterPoint) {
+        let container_size = container.len();
+
+        if container_size == 0 || container[container_size - 1] != point {
+            container.push(point);
+        }
     }
 }
