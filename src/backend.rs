@@ -239,8 +239,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 //   filled into a contiguous area.
                 // Notice: this method takes into account concave shapes
                 for shape_points in shape_splitter.collect() {
-                    // Is that enough points to form at least a triangle?
-                    if shape_points.len() >= 3 {
+                    // Is that enough points to form at least two triangles?
+                    if shape_points.len() >= 4 {
                         let triangles = poly2tri::triangulate_points(shape_points.iter());
 
                         for index in 0..triangles.size() {
