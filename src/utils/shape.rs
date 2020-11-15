@@ -79,16 +79,10 @@ impl ShapeSplitter {
         }
 
         // Close the first shape with the last point from the original shape?
-        // Notice: require at least 2 points to close the shape. Closing a shape containing 1 \
-        //   single point does not make sense. Also, points shall not be repeated, hence why \
-        //   there is a check that we are not closing the shape with either its starting point, or \
-        //   already-there ending point.
-        if !closed_shapes.is_empty()
-            && closed_shapes[0].len() >= 2
-            && closed_shapes[0][0] != self.last_point
-            && closed_shapes[0][closed_shapes[0].len() - 1] != self.last_point
-        {
-            closed_shapes[0].push(self.last_point);
+        // Notice: points shall not be repeated, hence why there is a check that we are not \
+        //   closing the shape with either its starting point, or already-there ending point.
+        if !closed_shapes.is_empty() {
+            Self::append_point(&mut closed_shapes[0], self.last_point);
         }
 
         closed_shapes
@@ -145,7 +139,8 @@ impl ShapeSplitter {
     fn append_point(container: &mut Vec<ShapeSplitterPoint>, point: ShapeSplitterPoint) {
         let container_size = container.len();
 
-        if container_size == 0 || container[container_size - 1] != point {
+        if container_size == 0 || (container[container_size - 1] != point && container[0] != point)
+        {
             container.push(point);
         }
     }
