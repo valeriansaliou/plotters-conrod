@@ -14,6 +14,7 @@ use plotters_backend::{
 
 use crate::error::ConrodBackendError;
 use crate::graph::ConrodBackendReusableGraph;
+use crate::triangulate;
 use crate::utils::{color, convert, path, position, shape};
 
 /// The Conrod drawing backend
@@ -241,7 +242,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 for shape_points in shape_splitter.collect() {
                     // Is that enough points to form at least a triangle?
                     if shape_points.len() >= 3 {
-                        let triangles = poly2tri::triangulate_points(shape_points.iter());
+                        let triangles = triangulate::triangulate_points(shape_points.iter());
 
                         for index in 0..triangles.size() {
                             conrod::widget::polygon::Polygon::abs_styled(

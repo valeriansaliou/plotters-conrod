@@ -17,6 +17,7 @@
 mod backend;
 mod error;
 mod graph;
+mod triangulate;
 mod utils;
 
 pub use backend::ConrodBackend;

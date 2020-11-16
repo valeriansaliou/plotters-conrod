@@ -13,9 +13,12 @@ authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 
 [dependencies]
 plotters-backend = "0.3"
-poly2tri = "0.1"
 num-traits = "0.2"
 conrod_core = "^0.70"
+libc = "0.1"
+
+[build-dependencies]
+cc = "1.0"
 
 [dev-dependencies]
 plotters = { version = "0.3", default_features = false, features = ["chrono", "bitmap_backend", "area_series", "ttf"] }
