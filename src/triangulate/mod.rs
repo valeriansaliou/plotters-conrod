@@ -111,7 +111,7 @@ impl CDT {
 
             let ll = p2t_cdt_get_triangles(self.ll);
 
-            TriangleVec { cdt: self, ll: ll }
+            TriangleVec { cdt: self, ll }
         }
     }
 }
