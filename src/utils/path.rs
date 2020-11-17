@@ -6,7 +6,7 @@
 
 use conrod_core::position::Scalar as ConrodScalar;
 
-type PathScalar = i32;
+pub(crate) type PathScalar = i32;
 
 type PathSimplifierPointInner = [PathScalar; 2];
 type PathSimplifierPointOuter = [ConrodScalar; 2];

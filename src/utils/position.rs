@@ -7,6 +7,8 @@
 use conrod_core::{self as conrod, position::Scalar as ConrodScalar};
 use plotters_backend::BackendCoord;
 
+use super::path::PathScalar;
+
 type PositionScalar = i32;
 
 pub(crate) struct PositionParent {
@@ -38,12 +40,12 @@ impl PositionParent {
     }
 
     #[inline(always)]
-    pub(crate) fn abs_point_path_simplifier(&self, point: &BackendCoord) -> [PositionScalar; 2] {
+    pub(crate) fn abs_point_path_simplifier(&self, point: &BackendCoord) -> [PathScalar; 2] {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
         [
-            (point.0 + self.x_start) as PositionScalar,
-            (-point.1 + self.y_end) as PositionScalar,
+            (point.0 + self.x_start) as PathScalar,
+            (-point.1 + self.y_end) as PathScalar,
         ]
     }
 }
