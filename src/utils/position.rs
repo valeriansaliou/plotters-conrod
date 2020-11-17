@@ -9,7 +9,7 @@ use plotters_backend::BackendCoord;
 
 use super::path::PathScalar;
 
-type PositionScalar = i32;
+type PositionScalar = f64;
 
 pub(crate) struct PositionParent {
     x_start: PositionScalar,
@@ -21,8 +21,8 @@ impl PositionParent {
     pub(crate) fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
         if let Some(parent_rect) = ui.rect_of(parent) {
             Some(Self {
-                x_start: parent_rect.x.start as PositionScalar,
-                y_end: parent_rect.y.end as PositionScalar,
+                x_start: parent_rect.x.start,
+                y_end: parent_rect.y.end,
             })
         } else {
             None
@@ -34,8 +34,8 @@ impl PositionParent {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
         [
-            (point.0 + self.x_start) as ConrodScalar,
-            (-point.1 + self.y_end) as ConrodScalar,
+            point.0 as PositionScalar + self.x_start,
+            -point.1 as PositionScalar + self.y_end,
         ]
     }
 
@@ -44,8 +44,8 @@ impl PositionParent {
         // Convert relative-positioned point (in backend coordinates) to absolute coordinates in \
         //   the full rendering space.
         [
-            (point.0 + self.x_start) as PathScalar,
-            (-point.1 + self.y_end) as PathScalar,
+            point.0 as PositionScalar + self.x_start,
+            -point.1 as PositionScalar + self.y_end,
         ]
     }
 }
