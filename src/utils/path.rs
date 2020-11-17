@@ -4,13 +4,17 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: MIT
 
-type PathSimplifierPointInner = [i32; 2];
-type PathSimplifierPointOuter = [f64; 2];
+use conrod_core::position::Scalar as ConrodScalar;
+
+type PathScalar = i32;
+
+type PathSimplifierPointInner = [PathScalar; 2];
+type PathSimplifierPointOuter = [ConrodScalar; 2];
 
 enum PathSimplifierGroup {
     None,
-    X(i32),
-    Y(i32),
+    X(PathScalar),
+    Y(PathScalar),
 }
 
 pub(crate) struct PathSimplifier<I: Iterator<Item = PathSimplifierPointInner>> {
@@ -95,7 +99,10 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
                     }
 
                     if do_yield {
-                        return Some([point_before[0] as _, point_before[1] as _]);
+                        return Some([
+                            point_before[0] as ConrodScalar,
+                            point_before[1] as ConrodScalar,
+                        ]);
                     }
                 }
             } else {
@@ -108,7 +115,7 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
         if let Some(last_point) = self.last_point {
             self.last_point = None;
 
-            return Some([last_point[0] as _, last_point[1] as _]);
+            return Some([last_point[0] as ConrodScalar, last_point[1] as ConrodScalar]);
         }
 
         // Done painting all path points

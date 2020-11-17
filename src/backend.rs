@@ -6,7 +6,7 @@
 
 use std::convert::From;
 
-use conrod_core::{self as conrod, Positionable, Widget};
+use conrod_core::{self as conrod, position::Scalar as ConrodScalar, Positionable, Widget};
 use plotters_backend::{
     text_anchor, BackendColor, BackendCoord, BackendStyle, BackendTextStyle, DrawingBackend,
     DrawingErrorKind,
@@ -96,12 +96,12 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             // Generate line style
             let line_style = conrod::widget::primitive::line::Style::solid()
                 .color(color::Color::from(&style.color()).into())
-                .thickness(style.stroke_width() as _);
+                .thickness(style.stroke_width() as ConrodScalar);
 
             // Render line widget
             conrod::widget::line::Line::abs_styled(
-                position.abs_point_f64(&from),
-                position.abs_point_f64(&to),
+                position.abs_point_conrod_scalar(&from),
+                position.abs_point_conrod_scalar(&to),
                 line_style,
             )
             .top_left_of(self.parent)
@@ -131,19 +131,23 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             conrod::widget::primitive::shape::Style::outline_styled(
                 conrod::widget::primitive::line::Style::new()
                     .color(color::Color::from(&style.color()).into())
-                    .thickness(style.stroke_width() as _),
+                    .thickness(style.stroke_width() as ConrodScalar),
             )
         };
 
         // Render rectangle widget
         conrod::widget::rectangle::Rectangle::styled(
             [
-                (bottom_right.0 - upper_left.0) as _,
-                (bottom_right.1 - upper_left.1) as _,
+                (bottom_right.0 - upper_left.0) as ConrodScalar,
+                (bottom_right.1 - upper_left.1) as ConrodScalar,
             ],
             rectangle_style,
         )
-        .top_left_with_margins_on(self.parent, upper_left.1 as _, upper_left.0 as _)
+        .top_left_with_margins_on(
+            self.parent,
+            upper_left.1 as ConrodScalar,
+            upper_left.0 as ConrodScalar,
+        )
         .set(self.graph.rect.next(&mut self.ui), &mut self.ui);
 
         Ok(())
@@ -159,12 +163,12 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             // Generate line style
             let line_style = conrod::widget::primitive::line::Style::solid()
                 .color(color::Color::from(&style.color()).into())
-                .thickness(style.stroke_width() as _);
+                .thickness(style.stroke_width() as ConrodScalar);
 
             // Render point path widget
             conrod::widget::point_path::PointPath::abs_styled(
                 path.into_iter()
-                    .map(|point| position.abs_point_f64(&point))
+                    .map(|point| position.abs_point_conrod_scalar(&point))
                     .collect::<Vec<conrod::position::Point>>(),
                 line_style,
             )
@@ -195,16 +199,16 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             conrod::widget::primitive::shape::Style::outline_styled(
                 conrod::widget::primitive::line::Style::new()
                     .color(color::Color::from(&style.color()).into())
-                    .thickness(style.stroke_width() as _),
+                    .thickness(style.stroke_width() as ConrodScalar),
             )
         };
 
         // Render circle widget
-        conrod::widget::circle::Circle::styled(radius as f64, circle_style)
+        conrod::widget::circle::Circle::styled(radius as ConrodScalar, circle_style)
             .top_left_with_margins_on(
                 self.parent,
-                (center.1 - radius as i32) as f64,
-                (center.0 - radius as i32) as f64,
+                (center.1 - radius as i32) as ConrodScalar,
+                (center.0 - radius as i32) as ConrodScalar,
             )
             .set(self.graph.circle.next(&mut self.ui), &mut self.ui);
 
@@ -223,7 +227,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             //   the number of triangles on screen to a strict minimum.
             let simplified_path: Vec<_> = path::PathSimplifier::from(
                 vert.into_iter()
-                    .map(|vertex| position.abs_point_i32(&vertex)),
+                    .map(|vertex| position.abs_point_path_simplifier(&vertex)),
             )
             .collect();
 
@@ -291,8 +295,8 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             .with_style(text_style)
             .top_left_with_margins_on(
                 self.parent,
-                pos.1 as f64 - (style.size() / 2.0 + 1.0),
-                pos.0 as f64 - text_width_estimated,
+                pos.1 as ConrodScalar - (style.size() / 2.0 + 1.0),
+                pos.0 as ConrodScalar - text_width_estimated,
             )
             .set(self.graph.text.next(&mut self.ui), &mut self.ui);
 

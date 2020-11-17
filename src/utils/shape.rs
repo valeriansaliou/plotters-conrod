@@ -4,9 +4,10 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: MIT
 
+use conrod_core::position::Scalar as ConrodScalar;
 use num_traits::identities::{One, Zero};
 
-type ShapeSplitterValue = f64;
+type ShapeSplitterValue = ConrodScalar;
 type ShapeSplitterPoint = [ShapeSplitterValue; 2];
 
 pub(crate) struct ShapeSplitter {

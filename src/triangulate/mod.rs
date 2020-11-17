@@ -13,10 +13,12 @@ extern crate libc;
 use libc::{c_void, size_t};
 use std::mem;
 
+type Scalar = f64;
+
 extern "C" {
     fn p2t_polyline_new() -> *mut c_void;
     fn p2t_polyline_free(polygon: *mut c_void);
-    fn p2t_polyline_add_point(polygon: *mut c_void, x: f64, y: f64);
+    fn p2t_polyline_add_point(polygon: *mut c_void, x: Scalar, y: Scalar);
 
     fn p2t_cdt_new(polygon: *mut c_void) -> *mut c_void;
     fn p2t_cdt_free(cdt: *mut c_void);
@@ -30,8 +32,8 @@ extern "C" {
     fn p2t_triangle_get_point(
         triangle: *const c_void,
         idx: size_t,
-        x_out: *mut f64,
-        y_out: *mut f64,
+        x_out: *mut Scalar,
+        y_out: *mut Scalar,
     );
 }
 
@@ -52,7 +54,7 @@ pub struct TriangleVec {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Triangle {
-    pub points: [[f64; 2]; 3],
+    pub points: [[Scalar; 2]; 3],
 }
 
 impl Polygon {
@@ -66,7 +68,7 @@ impl Polygon {
 
     pub fn from_iterator<'a, I>(points: I) -> Polygon
     where
-        I: Iterator<Item = &'a [f64; 2]>,
+        I: Iterator<Item = &'a [Scalar; 2]>,
     {
         let mut rv = Polygon::new();
 
@@ -77,7 +79,7 @@ impl Polygon {
         rv
     }
 
-    pub fn add_point(&mut self, x: f64, y: f64) {
+    pub fn add_point(&mut self, x: Scalar, y: Scalar) {
         unsafe {
             p2t_polyline_add_point(self.ll, x, y);
         }
@@ -160,7 +162,7 @@ impl Drop for TriangleVec {
 
 pub fn triangulate_points<'a, I>(points: I) -> TriangleVec
 where
-    I: Iterator<Item = &'a [f64; 2]>,
+    I: Iterator<Item = &'a [Scalar; 2]>,
 {
     CDT::new(Polygon::from_iterator(points)).triangulate()
 }
