@@ -37,15 +37,15 @@ extern "C" {
     );
 }
 
-pub struct Polygon {
+pub(crate) struct Polygon {
     ll: *mut c_void,
 }
 
-pub struct CDT {
+pub(crate) struct CDT {
     ll: *mut c_void,
 }
 
-pub struct TriangleVec {
+pub(crate) struct TriangleVec {
     ll: *mut c_void,
 
     #[allow(dead_code)]
@@ -53,12 +53,12 @@ pub struct TriangleVec {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-pub struct Triangle {
-    pub points: [[Scalar; 2]; 3],
+pub(crate) struct Triangle {
+    pub(crate) points: [[Scalar; 2]; 3],
 }
 
 impl Polygon {
-    pub fn new() -> Polygon {
+    pub(crate) fn new() -> Polygon {
         unsafe {
             Polygon {
                 ll: p2t_polyline_new(),
@@ -66,7 +66,7 @@ impl Polygon {
         }
     }
 
-    pub fn from_iterator<'a, I>(points: I) -> Polygon
+    pub(crate) fn from_iterator<'a, I>(points: I) -> Polygon
     where
         I: Iterator<Item = &'a [Scalar; 2]>,
     {
@@ -79,7 +79,7 @@ impl Polygon {
         rv
     }
 
-    pub fn add_point(&mut self, x: Scalar, y: Scalar) {
+    pub(crate) fn add_point(&mut self, x: Scalar, y: Scalar) {
         unsafe {
             p2t_polyline_add_point(self.ll, x, y);
         }
@@ -95,7 +95,7 @@ impl Drop for Polygon {
 }
 
 impl CDT {
-    pub fn new(polygon: Polygon) -> CDT {
+    pub(crate) fn new(polygon: Polygon) -> CDT {
         unsafe {
             let rv = CDT {
                 ll: p2t_cdt_new(polygon.ll),
@@ -107,7 +107,7 @@ impl CDT {
         }
     }
 
-    pub fn triangulate(self) -> TriangleVec {
+    pub(crate) fn triangulate(self) -> TriangleVec {
         unsafe {
             p2t_cdt_triangulate(self.ll);
 
@@ -127,11 +127,11 @@ impl Drop for CDT {
 }
 
 impl TriangleVec {
-    pub fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         unsafe { p2t_triangles_count(self.ll) as usize }
     }
 
-    pub fn get_triangle(&self, idx: usize) -> Triangle {
+    pub(crate) fn get_triangle(&self, idx: usize) -> Triangle {
         assert!(idx < self.size(), "Out of range");
 
         let mut p0 = [0.0; 2];
@@ -160,7 +160,7 @@ impl Drop for TriangleVec {
     }
 }
 
-pub fn triangulate_points<'a, I>(points: I) -> TriangleVec
+pub(crate) fn triangulate_points<'a, I>(points: I) -> TriangleVec
 where
     I: Iterator<Item = &'a [Scalar; 2]>,
 {
