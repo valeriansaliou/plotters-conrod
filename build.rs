@@ -11,8 +11,7 @@ fn main() {
 fn build_poly2tri() {
     cc::Build::new()
         .cpp(true)
-        .warnings(false)
-        .extra_warnings(false)
+        .flag("-Wno-c++11-extensions")
         .include("vendor/poly2tri")
         .file("src/triangulate/binding.cpp")
         .compile("libpoly2tri.a");

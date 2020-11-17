@@ -186,7 +186,7 @@ SweepContext::~SweepContext()
 {
 
     // Clean up memory
-    for (int i = 0; i < points_.size(); i++) {
+    for (unsigned int i = 0; i < points_.size(); i++) {
         delete points_[i];
     }
 

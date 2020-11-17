@@ -25,7 +25,7 @@ extern "C" {
         std::vector<p2t::Point *> *vec =
             reinterpret_cast<std::vector<p2t::Point *> *>(polyline);
 
-        for (int i = 0; i < vec->size(); i++) {
+        for (unsigned int i = 0; i < vec->size(); i++) {
             delete (*vec)[i];
         }
 
@@ -71,7 +71,6 @@ extern "C" {
         p2t::CDT *c = reinterpret_cast<p2t::CDT *>(cdt);
 
         auto vec = new std::vector<p2t::Triangle *>(c->GetTriangles());
-        auto first_p = (*vec)[0];
 
         return reinterpret_cast<void *>(vec);
     }
