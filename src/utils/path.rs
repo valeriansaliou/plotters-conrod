@@ -6,7 +6,7 @@
 
 use conrod_core::position::Scalar as ConrodScalar;
 
-pub(crate) type PathScalar = f64;
+pub(crate) type PathScalar = i32;
 
 type PathSimplifierPointInner = [PathScalar; 2];
 type PathSimplifierPointOuter = [ConrodScalar; 2];
@@ -99,7 +99,10 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
                     }
 
                     if do_yield {
-                        return Some([point_before[0], point_before[1]]);
+                        return Some([
+                            point_before[0] as ConrodScalar,
+                            point_before[1] as ConrodScalar,
+                        ]);
                     }
                 }
             } else {
@@ -112,7 +115,7 @@ impl<I: Iterator<Item = PathSimplifierPointInner>> Iterator for PathSimplifier<I
         if let Some(last_point) = self.last_point {
             self.last_point = None;
 
-            return Some([last_point[0], last_point[1]]);
+            return Some([last_point[0] as ConrodScalar, last_point[1] as ConrodScalar]);
         }
 
         // Done painting all path points
