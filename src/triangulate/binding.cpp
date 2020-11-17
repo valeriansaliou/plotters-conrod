@@ -71,7 +71,6 @@ extern "C" {
         p2t::CDT *c = reinterpret_cast<p2t::CDT *>(cdt);
 
         auto vec = new std::vector<p2t::Triangle *>(c->GetTriangles());
-        auto first_p = (*vec)[0];
 
         return reinterpret_cast<void *>(vec);
     }
