@@ -22,7 +22,7 @@ jobs:
           components: rustfmt
 
       - name: Install build headers
-        run: sudo apt-get install libxcb-shape0 libxcb-xfixes0
+        run: sudo apt-get install libxcb-shape0-dev libxcb-xfixes0-dev
 
       - name: Verify versions
         run: rustc --version && rustup --version && cargo --version
