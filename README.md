@@ -15,7 +15,7 @@ This backend has been optimized as for speed, and as to render plots that look v
 
 <table>
 <tr>
-<td align="center"><a href="https://makair.life/"><img src="https://valeriansaliou.github.io/plotters-conrod/images/makair.png" height="64" /></a></td>
+<td align="center"><a href="https://makair.life/"><img src="https://valeriansaliou.github.io/plotters-conrod/images/makair.png" width="64" /></a></td>
 </tr>
 <tr>
 <td align="center">MakAir</td>
