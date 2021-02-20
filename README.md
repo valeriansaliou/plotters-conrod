@@ -98,6 +98,19 @@ cargo run --release --example cpu-monitor
 
 _The first plot uses `plotters-conrod`, while the second plot uses the default Bitmap backend as a reference. This can be used to compare the output and performance of both plotting backends. The Bitmap reference plot can be disabled by setting `REFERENCE_BITMAP_ENABLED` to `false`._
 
+## How lightweight is it compared to other backends?
+
+The `plotters-conrod` backend was designed to perform all expensive computational work on the GPU, rather than on the CPU.
+
+While the default Bitmap backend rasterizer would only use the CPU (quite heavily at high FPS on real-time plots), this Conrod backend sends most of its work over to the GPU, as it uses OpenGL primitives to draw shapes.
+
+Measurements have been made by running an example comparing the Bitmap backend with the Conrod backend, on a 2019 MacBook Pro laptop, running a _2,3GHz 8-Core Intel Core i9_ CPU with a _Radeon Pro 560X 4GB_ GPU.
+
+**Those are the measurements results for a 800x480 pixels plot at 30 FPS:**
+
+* **Bitmap backend**: CPU `~31%`, GPU `~10%` (the CPU draws, then the GPU renders the bitmap on its framebuffer);
+* **Conrod backend**: CPU `~4%`, GPU `~15%` (the CPU passes data, the GPU draws);
+
 ## Are there any limitations?
 
 ### Limitation #1: No pixel-by-pixel rendering
