@@ -100,7 +100,7 @@ _The first plot uses `plotters-conrod`, while the second plot uses the default B
 
 ## How lightweight is it compared to other backends?
 
-The `plotters-conrod` backend was designed to perform all expensive computational work on the GPU, rather than on the CPU.
+The `plotters-conrod` backend was designed to perform all expensive computational work on the GPU, rather than on the CPU. This is a much more efficient, especially for large plot draw areas (in pixels).
 
 While the default Bitmap backend rasterizer would only use the CPU (quite heavily at high FPS on real-time plots), this Conrod backend sends most of its work over to the GPU, as it uses OpenGL primitives to draw shapes.
 
