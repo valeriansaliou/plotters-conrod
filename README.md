@@ -108,8 +108,8 @@ Measurements have been made by running [this example](./examples/cpu-monitor.rs)
 
 **Those are the measurements results for a 800x480 pixels plot at 30 FPS:**
 
-* ➡️ **Bitmap backend**: CPU `~31%`, GPU `~10%` (the CPU draws, then the GPU renders the bitmap on its framebuffer);
-* ➡️ **Conrod backend**: CPU `~4%`, GPU `~15%` (the CPU passes data, the GPU draws);
+* ➡️ **Bitmap backend**: CPU `~31%` stable, GPU `~10%` mean (the CPU draws, then the GPU renders the bitmap on its framebuffer);
+* ➡️ **Conrod backend**: CPU `~4%` stable, GPU `~15%` mean (the CPU passes data, the GPU draws);
 
 Memory usage is about the same for both backends.
 
