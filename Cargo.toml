@@ -15,7 +15,7 @@ authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 [dependencies]
 plotters-backend = "0.3"
 num-traits = "0.2"
-conrod_core = "^0.71"
+conrod_core = "0.76"
 libc = "0.2"
 
 [build-dependencies]
@@ -23,8 +23,8 @@ cc = "1.0"
 
 [dev-dependencies]
 plotters = { version = "0.3", default_features = false, features = ["chrono", "bitmap_backend", "area_series", "ttf"] }
-conrod_glium = "0.71"
-conrod_winit = "0.71"
+conrod_glium = "0.76"
+conrod_winit = "0.76"
 winit = "0.23"
 glium = "0.28"
 chrono = { version = "0.4", default-features = false }
