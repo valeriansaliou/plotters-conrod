@@ -61,7 +61,7 @@ impl WinitWindow for GliumDisplayWinitWrapper {
     }
 }
 
-conrod_winit::v023_conversion_fns!();
+conrod_winit::v025_conversion_fns!();
 
 impl ImageIds {
     pub fn new(
