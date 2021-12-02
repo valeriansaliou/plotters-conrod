@@ -17,7 +17,7 @@ use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
 use plotters_conrod::{ConrodBackend, ConrodBackendReusableGraph};
-// use psutil::*; // TODO: uncoment this when psutil is fixed
+use sysinfo::{ProcessorExt, RefreshKind, System, SystemExt};
 
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
@@ -121,7 +121,7 @@ fn main() {
         .unwrap();
 
     // Bootstrap CPU percent collector
-    // let mut cpu_percent_collector = cpu::CpuPercentCollector::new().unwrap(); // TODO: uncoment this when psutil is fixed
+    let mut system = System::new_with_specifics(RefreshKind::new().with_cpu());
     let (mut cpu_last_sample_value, mut cpu_last_sample_time) = (0, Instant::now());
     let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, i32)> =
         VecDeque::with_capacity(FRAME_TICK_RATE * PLOT_SECONDS);
@@ -150,7 +150,6 @@ fn main() {
     title_text_style.font_size = Some(TITLE_FONT_SIZE);
 
     // Run events handler
-    let start_time = std::time::Instant::now(); // TODO: remove this when psutil is fixed
     let mut ui_updated = true;
     let mut plot_data_updated = true;
     event_loop.run(move |event, _window_target, control_flow| {
@@ -158,8 +157,8 @@ fn main() {
 
         // Sample CPU point?
         if tick_start_time.duration_since(cpu_last_sample_time) > SAMPLE_EVERY {
-            // cpu_last_sample_value = cpu_percent_collector.cpu_percent().unwrap() as i32;
-            cpu_last_sample_value = (start_time.elapsed().as_secs() % 100) as i32; // TODO: remove this and uncoment previous line when psutil is fixed
+            system.refresh_cpu();
+            cpu_last_sample_value = system.global_processor_info().cpu_usage() as i32;
             cpu_last_sample_time = tick_start_time;
             plot_data_updated = true;
         }

@@ -28,4 +28,4 @@ conrod_winit = { git = "https://github.com/dsferruzza/conrod", branch = "update-
 winit = "0.25"
 glium = "0.30"
 chrono = { version = "0.4", default-features = false }
-#psutil = "3.2" # TODO: uncoment this when psutil is fixed
+sysinfo = "0.21.1"
