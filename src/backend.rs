@@ -105,7 +105,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.line.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.line.next(self.ui), self.ui);
 
             Ok(())
         } else {
@@ -148,7 +148,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             upper_left.1 as ConrodScalar,
             upper_left.0 as ConrodScalar,
         )
-        .set(self.graph.rect.next(&mut self.ui), &mut self.ui);
+        .set(self.graph.rect.next(self.ui), self.ui);
 
         Ok(())
     }
@@ -173,7 +173,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.path.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.path.next(self.ui), self.ui);
 
             Ok(())
         } else {
@@ -210,7 +210,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 (center.1 - radius as i32) as ConrodScalar,
                 (center.0 - radius as i32) as ConrodScalar,
             )
-            .set(self.graph.circle.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.circle.next(self.ui), self.ui);
 
         Ok(())
     }
@@ -254,7 +254,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                                 polygon_style,
                             )
                             .top_left_of(self.parent)
-                            .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
+                            .set(self.graph.fill.next(self.ui), self.ui);
                         }
                     }
                 }
@@ -298,7 +298,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as ConrodScalar - (style.size() / 2.0 + 1.0),
                 pos.0 as ConrodScalar - text_width_estimated,
             )
-            .set(self.graph.text.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.text.next(self.ui), self.ui);
 
         Ok(())
     }
