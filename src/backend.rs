@@ -92,7 +92,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // Acquire absolute position generator (in parent container)
-        if let Some(position) = position::PositionParent::from(&self.ui, self.parent) {
+        if let Some(position) = position::PositionParent::from(self.ui, self.parent) {
             // Generate line style
             let line_style = conrod::widget::primitive::line::Style::solid()
                 .color(color::Color::from(&style.color()).into())
@@ -105,7 +105,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.line.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.line.next(self.ui), self.ui);
 
             Ok(())
         } else {
@@ -148,7 +148,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
             upper_left.1 as ConrodScalar,
             upper_left.0 as ConrodScalar,
         )
-        .set(self.graph.rect.next(&mut self.ui), &mut self.ui);
+        .set(self.graph.rect.next(self.ui), self.ui);
 
         Ok(())
     }
@@ -159,7 +159,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // Acquire absolute position generator (in parent container)
-        if let Some(position) = position::PositionParent::from(&self.ui, self.parent) {
+        if let Some(position) = position::PositionParent::from(self.ui, self.parent) {
             // Generate line style
             let line_style = conrod::widget::primitive::line::Style::solid()
                 .color(color::Color::from(&style.color()).into())
@@ -173,7 +173,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 line_style,
             )
             .top_left_of(self.parent)
-            .set(self.graph.path.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.path.next(self.ui), self.ui);
 
             Ok(())
         } else {
@@ -210,7 +210,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 (center.1 - radius as i32) as ConrodScalar,
                 (center.0 - radius as i32) as ConrodScalar,
             )
-            .set(self.graph.circle.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.circle.next(self.ui), self.ui);
 
         Ok(())
     }
@@ -221,7 +221,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         style: &S,
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         // Acquire absolute position generator (in parent container)
-        if let Some(position) = position::PositionParent::from(&self.ui, self.parent) {
+        if let Some(position) = position::PositionParent::from(self.ui, self.parent) {
             // Paint a simplified path, where empty areas are removed and un-necessary points are \
             //   cleared. This is required for triangulation to work properly, and it reduces \
             //   the number of triangles on screen to a strict minimum.
@@ -254,7 +254,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                                 polygon_style,
                             )
                             .top_left_of(self.parent)
-                            .set(self.graph.fill.next(&mut self.ui), &mut self.ui);
+                            .set(self.graph.fill.next(self.ui), self.ui);
                         }
                     }
                 }
@@ -278,17 +278,17 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
         let (text_width_estimated, font_size_final) = convert::font_style(text, style.size());
 
         // Generate text style
-        let mut text_style = conrod::widget::primitive::text::Style::default();
-
-        text_style.color = Some(color::Color::from(&style.color()).into());
-        text_style.font_id = Some(Some(self.font));
-        text_style.font_size = Some(font_size_final);
-
-        text_style.justify = Some(match style.anchor().h_pos {
-            text_anchor::HPos::Left => conrod::text::Justify::Left,
-            text_anchor::HPos::Right => conrod::text::Justify::Right,
-            text_anchor::HPos::Center => conrod::text::Justify::Center,
-        });
+        let text_style = conrod::widget::primitive::text::Style {
+            font_size: Some(font_size_final),
+            font_id: Some(Some(self.font)),
+            color: Some(color::Color::from(&style.color()).into()),
+            justify: Some(match style.anchor().h_pos {
+                text_anchor::HPos::Left => conrod::text::Justify::Left,
+                text_anchor::HPos::Right => conrod::text::Justify::Right,
+                text_anchor::HPos::Center => conrod::text::Justify::Center,
+            }),
+            ..std::default::Default::default()
+        };
 
         // Render text widget
         conrod::widget::Text::new(text)
@@ -298,7 +298,7 @@ impl<'a, 'b> DrawingBackend for ConrodBackend<'a, 'b> {
                 pos.1 as ConrodScalar - (style.size() / 2.0 + 1.0),
                 pos.0 as ConrodScalar - text_width_estimated,
             )
-            .set(self.graph.text.next(&mut self.ui), &mut self.ui);
+            .set(self.graph.text.next(self.ui), self.ui);
 
         Ok(())
     }

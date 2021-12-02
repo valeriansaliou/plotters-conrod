@@ -10,7 +10,6 @@ extern crate conrod_core;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::path::Path;
-use std::thread;
 use std::time::{Duration, Instant};
 
 use conrod_core::{self as conrod, Positionable, Sizeable, Widget};
@@ -18,7 +17,7 @@ use conrod_winit::WinitWindow;
 use glium::{self, Surface};
 use plotters::prelude::*;
 use plotters_conrod::{ConrodBackend, ConrodBackendReusableGraph};
-use psutil::*;
+use sysinfo::{ProcessorExt, RefreshKind, System, SystemExt};
 
 const PLOT_WIDTH: u32 = 800;
 const PLOT_HEIGHT: u32 = 480;
@@ -41,98 +40,28 @@ const TITLE_MARGIN_TOP: f64 = 8.0;
 const SAMPLE_EVERY: Duration = Duration::from_secs(1);
 
 const FRAME_TICK_RATE: usize = 30;
-const FRAME_TICK_WAIT_NORMAL: Duration = Duration::from_millis(1000 / FRAME_TICK_RATE as u64);
-const FRAME_TICK_WAIT_MINIMUM: Duration = Duration::from_millis(10);
 
 // This can be used to disable the reference Bitmap chart
 const REFERENCE_BITMAP_ENABLED: bool = true;
-
-pub struct GliumDisplayWinitWrapper(pub glium::Display);
-pub struct EventLoop;
-
-pub struct EventsHandler {
-    event_loop: EventLoop,
-}
-
-pub enum EventsHandlerOutcome {
-    Break,
-    Continue,
-}
 
 pub struct ImageIds {
     pub bitmap_plot: conrod::image::Id,
 }
 
+pub struct GliumDisplayWinitWrapper(pub glium::Display);
+
 impl WinitWindow for GliumDisplayWinitWrapper {
     fn get_inner_size(&self) -> Option<(u32, u32)> {
-        self.0.gl_window().get_inner_size().map(Into::into)
+        let s = self.0.gl_window().window().inner_size();
+        Some((s.width, s.height))
     }
 
     fn hidpi_factor(&self) -> f32 {
-        self.0.gl_window().get_hidpi_factor() as _
+        self.0.gl_window().window().scale_factor() as f32
     }
 }
 
-impl EventLoop {
-    pub fn start() -> Self {
-        EventLoop {}
-    }
-
-    /// Produce an iterator yielding all available events.
-    pub fn next(
-        &mut self,
-        events_loop: &mut glium::glutin::EventsLoop,
-    ) -> Vec<glium::glutin::Event> {
-        // Collect all pending events.
-        let mut events = Vec::new();
-
-        events_loop.poll_events(|event| events.push(event));
-
-        events
-    }
-}
-
-impl EventsHandler {
-    pub fn run() -> EventsHandler {
-        EventsHandler {
-            event_loop: EventLoop::start(),
-        }
-    }
-
-    pub fn handle(
-        &mut self,
-        display: &GliumDisplayWinitWrapper,
-        interface: &mut conrod::Ui,
-        mut events_loop: &mut glium::glutin::EventsLoop,
-    ) -> EventsHandlerOutcome {
-        for event in self.event_loop.next(&mut events_loop) {
-            // Use the `winit` backend feature to convert the winit event to a conrod one.
-            if let Some(event) = convert_event(event.clone(), display) {
-                interface.handle_event(event);
-            }
-
-            // Break from the loop upon `Escape` or closed window.
-            if let glium::glutin::Event::WindowEvent { event, .. } = event.clone() {
-                match event {
-                    glium::glutin::WindowEvent::CloseRequested
-                    | glium::glutin::WindowEvent::KeyboardInput {
-                        input:
-                            glium::glutin::KeyboardInput {
-                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => {
-                        return EventsHandlerOutcome::Break;
-                    }
-                    _ => (),
-                }
-            }
-        }
-
-        EventsHandlerOutcome::Continue
-    }
-}
+conrod_winit::v025_conversion_fns!();
 
 impl ImageIds {
     pub fn new(
@@ -145,8 +74,6 @@ impl ImageIds {
     }
 }
 
-conrod_winit::conversion_fns!();
-
 widget_ids!(struct Ids {
     bitmap_wrapper,
     bitmap_text,
@@ -157,11 +84,14 @@ widget_ids!(struct Ids {
 
 fn main() {
     // Bootstrap Glium
-    let mut events_loop = glium::glutin::EventsLoop::new();
+    let event_loop = glium::glutin::event_loop::EventLoop::new();
 
-    let window = glium::glutin::WindowBuilder::new()
+    let window = glium::glutin::window::WindowBuilder::new()
         .with_title("CPU Monitor Example")
-        .with_dimensions((WINDOW_WIDTH, WINDOW_HEIGHT).into())
+        .with_inner_size(glium::glutin::dpi::LogicalSize::new(
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        ))
         .with_resizable(false)
         .with_decorations(true)
         .with_always_on_top(false);
@@ -173,7 +103,7 @@ fn main() {
     let mut interface = conrod::UiBuilder::new([WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64]).build();
 
     let display =
-        GliumDisplayWinitWrapper(glium::Display::new(window, context, &events_loop).unwrap());
+        GliumDisplayWinitWrapper(glium::Display::new(window, context, &event_loop).unwrap());
 
     let ids = Ids::new(interface.widget_id_generator());
 
@@ -191,7 +121,7 @@ fn main() {
         .unwrap();
 
     // Bootstrap CPU percent collector
-    let mut cpu_percent_collector = cpu::CpuPercentCollector::new().unwrap();
+    let mut system = System::new_with_specifics(RefreshKind::new().with_cpu());
     let (mut cpu_last_sample_value, mut cpu_last_sample_time) = (0, Instant::now());
     let mut data_points: VecDeque<(chrono::DateTime<chrono::Utc>, i32)> =
         VecDeque::with_capacity(FRAME_TICK_RATE * PLOT_SECONDS);
@@ -220,20 +150,21 @@ fn main() {
     title_text_style.font_size = Some(TITLE_FONT_SIZE);
 
     // Run events handler
-    let mut events_handler = EventsHandler::run();
-
-    // Start drawing loop
-    'main: loop {
+    let mut ui_updated = true;
+    let mut plot_data_updated = true;
+    event_loop.run(move |event, _window_target, control_flow| {
         let tick_start_time = Instant::now();
 
         // Sample CPU point?
         if tick_start_time.duration_since(cpu_last_sample_time) > SAMPLE_EVERY {
-            cpu_last_sample_value = cpu_percent_collector.cpu_percent().unwrap() as i32;
+            system.refresh_cpu();
+            cpu_last_sample_value = system.global_processor_info().cpu_usage() as i32;
             cpu_last_sample_time = tick_start_time;
+            plot_data_updated = true;
         }
 
         // Append point in data points (plus, trim to maximum size & clean expired points)
-        {
+        if plot_data_updated {
             data_points.truncate(FRAME_TICK_RATE * PLOT_SECONDS - 1);
 
             if !data_points.is_empty() {
@@ -249,97 +180,109 @@ fn main() {
         }
 
         // Handle incoming UI events (ie. from the window, eg. 'ESC' key is pressed)
-        match events_handler.handle(&display, &mut interface, &mut events_loop) {
-            EventsHandlerOutcome::Break => break 'main,
-            EventsHandlerOutcome::Continue => {}
+        match &event {
+            glium::glutin::event::Event::WindowEvent { event, .. } => match event {
+                // Break from the loop upon `Escape`.
+                glium::glutin::event::WindowEvent::CloseRequested
+                | glium::glutin::event::WindowEvent::KeyboardInput {
+                    input:
+                        glium::glutin::event::KeyboardInput {
+                            virtual_keycode: Some(glium::glutin::event::VirtualKeyCode::Escape),
+                            ..
+                        },
+                    ..
+                } => *control_flow = glium::glutin::event_loop::ControlFlow::Exit,
+                _ => {}
+            },
+            _ => {}
         }
 
-        // Draw UI for tick
-        {
-            let mut ui = interface.set_widgets();
+        // Use the `winit` backend feature to convert the winit event to a conrod one.
+        if let Some(event) = convert_event(&event, &display.0.gl_window().window()) {
+            interface.handle_event(event);
+            ui_updated = true;
+        }
 
-            // Draw Conrod chart
-            conrod::widget::canvas::Canvas::new()
-                .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                .with_style(canvas_style)
-                .top_left()
-                .set(ids.conrod_wrapper, &mut ui);
+        let should_update_ui = ui_updated || plot_data_updated;
 
-            render_conrod_plot(
-                &mut ui,
-                &mut data_points,
-                &ids,
-                font_regular,
-                &mut conrod_graph,
-            );
+        match &event {
+            glium::glutin::event::Event::MainEventsCleared => {
+                if should_update_ui {
+                    ui_updated = false;
+                    plot_data_updated = false;
 
-            conrod::widget::Text::new("Conrod test chart")
-                .with_style(title_text_style)
-                .top_left_with_margins_on(ids.conrod_wrapper, TITLE_MARGIN_TOP, TITLE_MARGIN_LEFT)
-                .set(ids.conrod_text, &mut ui);
+                    let ui = &mut interface.set_widgets();
 
-            // Draw Bitmap chart?
-            if REFERENCE_BITMAP_ENABLED {
-                conrod::widget::canvas::Canvas::new()
-                    .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                    .with_style(canvas_style)
-                    .down_from(ids.conrod_wrapper, 0.0)
-                    .set(ids.bitmap_wrapper, &mut ui);
+                    // Draw Conrod chart
+                    conrod::widget::canvas::Canvas::new()
+                        .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                        .with_style(canvas_style)
+                        .top_left()
+                        .set(ids.conrod_wrapper, ui);
 
-                image_map.replace(
-                    image_ids.bitmap_plot,
-                    render_bitmap_plot(&display, &mut data_points),
-                );
+                    render_conrod_plot(ui, &mut data_points, &ids, font_regular, &mut conrod_graph);
 
-                conrod::widget::Image::new(image_ids.bitmap_plot)
-                    .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
-                    .top_left_of(ids.bitmap_wrapper)
-                    .set(ids.bitmap_plot, &mut ui);
+                    conrod::widget::Text::new("Conrod test chart")
+                        .with_style(title_text_style)
+                        .top_left_with_margins_on(
+                            ids.conrod_wrapper,
+                            TITLE_MARGIN_TOP,
+                            TITLE_MARGIN_LEFT,
+                        )
+                        .set(ids.conrod_text, ui);
 
-                conrod::widget::Text::new("Bitmap reference chart")
-                    .with_style(title_text_style)
-                    .top_left_with_margins_on(
-                        ids.bitmap_wrapper,
-                        TITLE_MARGIN_TOP,
-                        TITLE_MARGIN_LEFT,
-                    )
-                    .set(ids.bitmap_text, &mut ui);
+                    // Draw Bitmap chart?
+                    if REFERENCE_BITMAP_ENABLED {
+                        conrod::widget::canvas::Canvas::new()
+                            .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                            .with_style(canvas_style)
+                            .down_from(ids.conrod_wrapper, 0.0)
+                            .set(ids.bitmap_wrapper, ui);
+
+                        image_map.replace(
+                            image_ids.bitmap_plot,
+                            render_bitmap_plot(&display, &mut data_points),
+                        );
+
+                        conrod::widget::Image::new(image_ids.bitmap_plot)
+                            .w_h(PLOT_WIDTH as _, PLOT_HEIGHT as _)
+                            .top_left_of(ids.bitmap_wrapper)
+                            .set(ids.bitmap_plot, ui);
+
+                        conrod::widget::Text::new("Bitmap reference chart")
+                            .with_style(title_text_style)
+                            .top_left_with_margins_on(
+                                ids.bitmap_wrapper,
+                                TITLE_MARGIN_TOP,
+                                TITLE_MARGIN_LEFT,
+                            )
+                            .set(ids.bitmap_text, ui);
+                    }
+
+                    display.0.gl_window().window().request_redraw();
+                }
             }
-        }
+            glium::glutin::event::Event::RedrawRequested(_) => {
+                if let Some(primitives) = interface.draw_if_changed() {
+                    renderer.fill(&display.0, primitives, &image_map);
 
-        // Draw interface (if it was updated)
-        {
-            if let Some(primitives) = interface.draw_if_changed() {
-                renderer.fill(&display.0, primitives, &image_map);
+                    let mut target = display.0.draw();
 
-                let mut target = display.0.draw();
+                    target.clear_color(0.0, 0.0, 0.0, 1.0);
 
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                    renderer.draw(&display.0, &mut target, &image_map).unwrap();
 
-                renderer.draw(&display.0, &mut target, &image_map).unwrap();
-
-                target.finish().unwrap();
+                    target.finish().unwrap();
+                }
             }
+            _ => {}
         }
-
-        let tick_spent_time = tick_start_time.elapsed();
-
-        // FPS limiter, also makes sure to account for each loop processing time in the current \
-        //   limit, as to 'guarantee' that we converge to the target FPS in any case.
-        thread::sleep(if FRAME_TICK_WAIT_NORMAL > tick_spent_time {
-            std::cmp::max(
-                FRAME_TICK_WAIT_NORMAL - tick_spent_time,
-                FRAME_TICK_WAIT_MINIMUM,
-            )
-        } else {
-            FRAME_TICK_WAIT_MINIMUM
-        });
-    }
+    });
 }
 
 fn render_bitmap_plot(
     display: &GliumDisplayWinitWrapper,
-    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    data_points: &VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
 ) -> glium::texture::SrgbTexture2d {
     if REFERENCE_BITMAP_ENABLED {
         let mut buffer_rgb: Vec<u8> = vec![0; PLOT_PIXELS * 3];
@@ -372,7 +315,7 @@ fn render_bitmap_plot(
 
 fn render_conrod_plot<'a, 'b>(
     ui: &'a mut conrod::UiCell<'b>,
-    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    data_points: &VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     ids: &'b Ids,
     font: conrod_core::text::font::Id,
     graph: &mut ConrodBackendReusableGraph,
@@ -390,7 +333,7 @@ fn render_conrod_plot<'a, 'b>(
 }
 
 fn plot<D: IntoDrawingArea>(
-    data_points: &mut VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
+    data_points: &VecDeque<(chrono::DateTime<chrono::Utc>, i32)>,
     drawing: &DrawingArea<D, plotters::coord::Shift>,
 ) {
     // Acquire time range

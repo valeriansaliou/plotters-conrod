@@ -30,10 +30,10 @@ impl From<&BackendColor> for Color {
     }
 }
 
-impl Into<conrod::color::Color> for Color {
+impl From<Color> for conrod::color::Color {
     #[inline(always)]
-    fn into(self) -> conrod::color::Color {
-        self.0
+    fn from(c: Color) -> Self {
+        c.0
     }
 }
 
