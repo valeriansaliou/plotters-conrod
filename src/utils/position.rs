@@ -19,14 +19,10 @@ pub(crate) struct PositionParent {
 impl PositionParent {
     #[inline(always)]
     pub(crate) fn from(ui: &conrod::UiCell, parent: conrod::widget::Id) -> Option<Self> {
-        if let Some(parent_rect) = ui.rect_of(parent) {
-            Some(Self {
-                x_start: parent_rect.x.start as PositionScalar,
-                y_end: parent_rect.y.end as PositionScalar,
-            })
-        } else {
-            None
-        }
+        ui.rect_of(parent).map(|parent_rect| Self {
+            x_start: parent_rect.x.start as PositionScalar,
+            y_end: parent_rect.y.end as PositionScalar,
+        })
     }
 
     #[inline(always)]
